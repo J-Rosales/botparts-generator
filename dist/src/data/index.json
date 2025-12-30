@@ -1,0 +1,23 @@
+{
+  "siteTitle": "Bot Catalogue",
+  "entries": [
+    {
+      "slug": "example-bot",
+      "name": "Example Bot",
+      "description": "Example entry used for development.",
+      "tags": [
+        "fantasy",
+        "friendly",
+        "lite"
+      ],
+      "featured": true,
+      "uploadDate": "2025-01-02",
+      "redistributeAllowed": "unknown",
+      "source": {
+        "url": "https://example.com/original",
+        "label": "Original source"
+      },
+      "dataPath": "data/characters/example-bot.json"
+    }
+  ]
+}

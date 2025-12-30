@@ -1,0 +1,113 @@
+{
+  "slug": "example-bot",
+  "name": "Example Bot",
+  "description": "Example character definition used for UI and generator scaffolding.",
+  "tags": [
+    "fantasy",
+    "friendly",
+    "lite"
+  ],
+  "redistributeAllowed": "unknown",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/original",
+      "label": "Original source"
+    },
+    "backup": null,
+    "notes": "If redistributeAllowed is false, do not host backups or snapshots."
+  },
+  "updated": "2025-01-12",
+  "versions": [
+    {
+      "version": "1.2",
+      "date": "2025-01-12",
+      "notes": "Expanded alternate greetings and refreshed the system prompt tone."
+    },
+    {
+      "version": "1.1",
+      "date": "2025-01-05",
+      "notes": "Added post-history instructions and export presets."
+    }
+  ],
+  "modules": [
+    {
+      "id": "base-persona",
+      "label": "Base Persona",
+      "type": "required",
+      "contentKey": "persona",
+      "help": "Core persona definition that always ships with the character."
+    },
+    {
+      "id": "first-message",
+      "label": "First Message",
+      "type": "toggle",
+      "defaultEnabled": true,
+      "contentKey": "firstMessage",
+      "help": "Opening line that kicks off new chats."
+    },
+    {
+      "id": "alt-greetings",
+      "label": "Alternate Greetings",
+      "type": "toggle",
+      "contentKey": "alternateGreetings",
+      "help": "Optional starter variants to swap into the greeting."
+    },
+    {
+      "id": "post-history",
+      "label": "Post History Instructions",
+      "type": "toggle",
+      "contentKey": "postHistoryInstructions",
+      "help": "Late-turn reminders to keep the conversation on track."
+    },
+    {
+      "id": "system-prompt",
+      "label": "System Prompt",
+      "type": "toggle",
+      "contentKey": "systemPrompt",
+      "help": "System-level prompt that anchors the character voice."
+    },
+    {
+      "id": "greeting-standard",
+      "label": "Standard Greeting Style",
+      "type": "oneOf",
+      "group": "greeting-style",
+      "groupLabel": "Greeting style",
+      "defaultEnabled": true,
+      "contentKey": "greetingStyleStandard",
+      "help": "Balanced greeting tone for most chats."
+    },
+    {
+      "id": "greeting-dramatic",
+      "label": "Dramatic Greeting Style",
+      "type": "oneOf",
+      "group": "greeting-style",
+      "groupLabel": "Greeting style",
+      "contentKey": "greetingStyleDramatic",
+      "help": "Adds extra flair and emphasis to the opening."
+    }
+  ],
+  "transforms": [
+    {
+      "id": "natural",
+      "label": "Natural language",
+      "kind": "presentation"
+    },
+    {
+      "id": "schema",
+      "label": "Schema/checklist",
+      "kind": "presentation"
+    }
+  ],
+  "content": {
+    "persona": "Stub persona text. Example Bot is a cheerful guide who speaks in short, encouraging sentences.",
+    "firstMessage": "Hey there! Ready to explore a new quest together?",
+    "alternateGreetings": [
+      "Greetings, traveler! What path shall we chart today?",
+      "Hello, friend! I saved a seat by the campfire."
+    ],
+    "postHistoryInstructions": "After a long chat, summarize any new lore or names introduced.",
+    "systemPrompt": "You are Example Bot. Stay upbeat and avoid explicit content.",
+    "greetingStyleStandard": "Tone: welcoming, warm, and concise.",
+    "greetingStyleDramatic": "Tone: theatrical, high-energy, with expressive flourishes."
+  }
+}

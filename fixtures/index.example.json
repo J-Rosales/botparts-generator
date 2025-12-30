@@ -1,0 +1,32 @@
+{
+  "siteTitle": "Bot Catalogue",
+  "entries": [
+    {
+      "slug": "example-bot",
+      "name": "Example Bot",
+      "description": "Example entry used for development.",
+      "tags": [
+        "fantasy",
+        "friendly",
+        "lite"
+      ],
+      "featured": true,
+      "lastUpdated": "2025-01-15",
+      "author": {
+        "name": "Sample Creator",
+        "url": "https://example.com/creator"
+      },
+      "tokenCount": 1280,
+      "redistribution": {
+        "status": "unknown",
+        "notes": "No explicit license found. Default to unknown."
+      },
+      "source": {
+        "url": "https://example.com/original",
+        "label": "Original source",
+        "site": "Example Hub"
+      },
+      "dataPath": "data/characters/example-bot.json"
+    }
+  ]
+}

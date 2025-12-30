@@ -1,0 +1,182 @@
+{
+  "slug": "example-bot",
+  "name": "Example Bot",
+  "description": "Example character definition used for UI and generator scaffolding.",
+  "tags": [
+    "fantasy",
+    "friendly",
+    "lite"
+  ],
+  "featured": true,
+  "lastUpdated": "2025-01-15",
+  "author": {
+    "name": "Sample Creator",
+    "url": "https://example.com/creator"
+  },
+  "tokenCount": 1280,
+  "redistribution": {
+    "status": "unknown",
+    "notes": "No explicit license found. Default to unknown."
+  },
+  "provenance": {
+    "original": {
+      "url": "https://example.com/original",
+      "label": "Original source",
+      "site": "Example Hub"
+    },
+    "backup": null,
+    "attribution": {
+      "authorName": "Sample Creator",
+      "sourceSite": "Example Hub",
+      "displayText": "rewritten or inspired by Sample Creator (Example Hub)"
+    },
+    "notes": "If redistribution is disallowed, do not host backups or snapshots."
+  },
+  "modules": [
+    {
+      "id": "base",
+      "label": "Base",
+      "type": "required"
+    },
+    {
+      "id": "lore_pack",
+      "label": "Lore Pack",
+      "type": "toggle",
+      "defaultEnabled": true
+    },
+    {
+      "id": "constraints",
+      "label": "Constraints",
+      "type": "toggle",
+      "defaultEnabled": true
+    },
+    {
+      "id": "alt_tone",
+      "label": "Alternate Tone",
+      "type": "oneOf",
+      "group": "tone",
+      "option": "alt"
+    }
+  ],
+  "transforms": [
+    {
+      "id": "natural",
+      "label": "Natural language",
+      "kind": "presentation"
+    },
+    {
+      "id": "schema",
+      "label": "Schema/checklist",
+      "kind": "schema"
+    }
+  ],
+  "manifest": {
+    "fragments": {
+      "persona": {
+        "path": "data/fragments/example-bot/persona.txt",
+        "kind": "persona",
+        "tokenCount": 320
+      },
+      "scenario": {
+        "path": "data/fragments/example-bot/scenario.txt",
+        "kind": "scenario",
+        "tokenCount": 220
+      },
+      "greeting": {
+        "path": "data/fragments/example-bot/greeting.txt",
+        "kind": "greeting",
+        "tokenCount": 120
+      },
+      "lore_pack": {
+        "path": "data/fragments/example-bot/lore-pack.txt",
+        "kind": "lore",
+        "tokenCount": 400
+      },
+      "constraints": {
+        "path": "data/fragments/example-bot/constraints.txt",
+        "kind": "system",
+        "tokenCount": 220
+      }
+    },
+    "modules": [
+      {
+        "id": "base",
+        "fragmentRefs": [
+          "persona",
+          "scenario",
+          "greeting"
+        ]
+      },
+      {
+        "id": "lore_pack",
+        "fragmentRefs": [
+          "lore_pack"
+        ]
+      },
+      {
+        "id": "constraints",
+        "fragmentRefs": [
+          "constraints"
+        ]
+      },
+      {
+        "id": "alt_tone",
+        "fragmentRefs": [
+          "persona"
+        ]
+      }
+    ],
+    "assembly": {
+      "sequence": [
+        {
+          "fragment": "persona",
+          "required": true
+        },
+        {
+          "fragment": "scenario",
+          "required": true
+        },
+        {
+          "fragment": "greeting",
+          "required": true
+        },
+        {
+          "fragment": "lore_pack",
+          "required": false
+        },
+        {
+          "fragment": "constraints",
+          "required": false
+        }
+      ],
+      "separator": "\n\n"
+    },
+    "outputs": [
+      {
+        "id": "default-json",
+        "label": "SillyTavern JSON",
+        "format": "json",
+        "transformId": "schema",
+        "includesModules": [
+          "base",
+          "lore_pack",
+          "constraints"
+        ],
+        "fileNameTemplate": "{slug}.json",
+        "default": true
+      },
+      {
+        "id": "natural-text",
+        "label": "Natural language pack",
+        "format": "text",
+        "transformId": "natural",
+        "includesModules": [
+          "base",
+          "lore_pack"
+        ],
+        "fileNameTemplate": "{slug}-natural.txt",
+        "default": false
+      }
+    ]
+  }
+}
