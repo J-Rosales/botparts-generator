@@ -1,0 +1,327 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/botparts/schemas/manifest.schema.json",
+  "title": "Botparts Character Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "name",
+    "description",
+    "tags",
+    "redistributeAllowed",
+    "provenance",
+    "base",
+    "modules",
+    "transforms"
+  ],
+  "properties": {
+    "slug": {
+      "$ref": "#/$defs/Slug"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Tag"
+      }
+    },
+    "redistributeAllowed": {
+      "$ref": "#/$defs/RedistributeAllowed"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fragments"
+      ],
+      "properties": {
+        "fragments": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "persona": {
+              "type": "string"
+            },
+            "scenario": {
+              "type": "string"
+            },
+            "system_prompt": {
+              "type": "string"
+            },
+            "greetings": {
+              "type": "string",
+              "description": "Path to greetings set JSON array."
+            },
+            "lore": {
+              "type": "string"
+            },
+            "examples": {
+              "type": "string"
+            },
+            "x": {
+              "$ref": "#/$defs/XExtensions"
+            }
+          }
+        },
+        "x": {
+          "$ref": "#/$defs/XExtensions"
+        }
+      }
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "target",
+          "op"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "required",
+              "toggle",
+              "oneOf"
+            ]
+          },
+          "group": {
+            "type": "string"
+          },
+          "defaultEnabled": {
+            "type": "boolean"
+          },
+          "target": {
+            "type": "string"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "replace",
+              "append",
+              "prepend",
+              "replaceSet",
+              "insertBefore",
+              "insertAfter"
+            ]
+          },
+          "valuePath": {
+            "type": "string"
+          },
+          "valueInline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "conditions": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "x": {
+            "$ref": "#/$defs/XExtensions"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "kind": {
+                  "const": "oneOf"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "group"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "transforms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "renderer"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "presentation",
+              "content"
+            ],
+            "default": "presentation"
+          },
+          "renderer": {
+            "type": "string",
+            "enum": [
+              "spec_v2_json",
+              "text_pack",
+              "png_card"
+            ]
+          },
+          "templatePath": {
+            "type": "string"
+          },
+          "rules": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "x": {
+            "$ref": "#/$defs/XExtensions"
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selectedModules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "transformId": {
+          "type": "string"
+        },
+        "outputSet": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "spec_v2_json",
+              "text_pack",
+              "png_card"
+            ]
+          }
+        },
+        "x": {
+          "$ref": "#/$defs/XExtensions"
+        }
+      }
+    },
+    "x": {
+      "$ref": "#/$defs/XExtensions"
+    }
+  },
+  "$defs": {
+    "Slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "URL-safe identifier. Lowercase letters, digits, hyphen."
+    },
+    "Url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Absolute URL."
+    },
+    "Tag": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "RedistributeAllowed": {
+      "type": "string",
+      "enum": [
+        "true",
+        "false",
+        "unknown"
+      ],
+      "description": "Policy: whether this entry can be redistributed as-is. If false, do not host backups/snapshots."
+    },
+    "ProvenanceLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "$ref": "#/$defs/Url"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original"
+      ],
+      "properties": {
+        "original": {
+          "$ref": "#/$defs/ProvenanceLink"
+        },
+        "backup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProvenanceLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional backup link. Must be null/omitted if redistributeAllowed is false."
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "XExtensions": {
+      "type": "object",
+      "description": "Extension escape hatch. Keys should be prefixed with 'x-' by convention.",
+      "additionalProperties": true
+    }
+  }
+}

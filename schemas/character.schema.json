@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/botparts/schemas/character.schema.json",
+  "title": "Botparts Canonical Character (Base/Compiled)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "name",
+    "description",
+    "tags",
+    "redistributeAllowed",
+    "provenance",
+    "content"
+  ],
+  "properties": {
+    "slug": {
+      "$ref": "#/$defs/Slug"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Tag"
+      }
+    },
+    "redistributeAllowed": {
+      "$ref": "#/$defs/RedistributeAllowed"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "version": {
+      "type": "string"
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "persona"
+      ],
+      "properties": {
+        "system_prompt": {
+          "type": "string"
+        },
+        "greetings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "persona": {
+          "type": "string"
+        },
+        "scenario": {
+          "type": "string"
+        },
+        "lore": {
+          "type": "string"
+        },
+        "examples": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "x": {
+          "$ref": "#/$defs/XExtensions"
+        }
+      }
+    },
+    "x": {
+      "$ref": "#/$defs/XExtensions"
+    }
+  },
+  "$defs": {
+    "Slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "URL-safe identifier. Lowercase letters, digits, hyphen."
+    },
+    "Url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Absolute URL."
+    },
+    "Tag": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "RedistributeAllowed": {
+      "type": "string",
+      "enum": [
+        "true",
+        "false",
+        "unknown"
+      ],
+      "description": "Policy: whether this entry can be redistributed as-is. If false, do not host backups/snapshots."
+    },
+    "ProvenanceLink": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "url"
+      ],
+      "properties": {
+        "url": {
+          "$ref": "#/$defs/Url"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
+    "Provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "original"
+      ],
+      "properties": {
+        "original": {
+          "$ref": "#/$defs/ProvenanceLink"
+        },
+        "backup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ProvenanceLink"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional backup link. Must be null/omitted if redistributeAllowed is false."
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "XExtensions": {
+      "type": "object",
+      "description": "Extension escape hatch. Keys should be prefixed with 'x-' by convention.",
+      "additionalProperties": true
+    }
+  }
+}
