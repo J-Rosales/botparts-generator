@@ -1,23 +1,47 @@
 {
-  "siteTitle": "Bot Catalogue",
   "entries": [
     {
-      "slug": "example-bot",
-      "name": "Example Bot",
-      "description": "Example entry used for development.",
-      "tags": [
-        "fantasy",
-        "friendly",
-        "lite"
-      ],
-      "featured": true,
-      "uploadDate": "2025-01-02",
-      "redistributeAllowed": "unknown",
-      "source": {
-        "url": "https://example.com/original",
-        "label": "Original source"
+      "dataPath": "data/characters/bunker-girl/manifest.json",
+      "description": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must survive as long as you can with her.",
+      "featured": false,
+      "name": "Amanda",
+      "provenance": {
+        "original": {
+          "url": "https://example.com/unknown"
+        }
       },
-      "dataPath": "data/characters/example-bot.json"
+      "redistributeAllowed": "unknown",
+      "slug": "bunker-girl",
+      "tags": [],
+      "x": {
+        "aiTokens": null,
+        "placeholder": false,
+        "shortDescription": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must surviv",
+        "spoilerTags": [],
+        "uploadDate": ""
+      }
+    },
+    {
+      "dataPath": "data/characters/y/manifest.json",
+      "description": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must survive as long as you can with her.",
+      "featured": false,
+      "name": "y",
+      "provenance": {
+        "original": {
+          "url": "https://example.com/unknown"
+        }
+      },
+      "redistributeAllowed": "unknown",
+      "slug": "y",
+      "tags": [],
+      "x": {
+        "aiTokens": null,
+        "placeholder": false,
+        "shortDescription": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must surviv",
+        "spoilerTags": [],
+        "uploadDate": ""
+      }
     }
-  ]
+  ],
+  "siteTitle": "Bot Catalogue"
 }

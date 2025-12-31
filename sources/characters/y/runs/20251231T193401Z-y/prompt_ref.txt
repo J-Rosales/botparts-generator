@@ -1,0 +1,2 @@
+C:/Users/GKG_VivoBook15/Documents/GitHub/BotpartsProject/botparts-generator/prompts/elaborate/01_elaborate_v1.md
+sha256:ff9a62edf34644aee0dcf43c49c5a0ae75dddb0fea1c069058305175e4a93ea2
