@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Iterable
 
 from src import authoring
+from src import llm_client
 from src.generator import build_site_data
 from src.secrets import load_secrets_file
 
@@ -118,14 +119,15 @@ def _run_author(args: argparse.Namespace) -> int:
     extract_prompt = _select_prompt(prompts_root, args.extract_category)
 
     compiled_elaboration = _compile_prompt(elaborate_prompt, section.content, "CONCEPT SNIPPET")
-    elaboration = _invoke_llm_stub(compiled_elaboration, section.content, mode="elaborate")
+    llm_result = _invoke_llm(compiled_elaboration)
+    elaboration = llm_result.output_text
     run_id = authoring.build_run_id(slug)
     run_dir = character_dir / "runs" / run_id
     authoring.write_run_log(
         run_dir,
         elaborate_prompt,
         compiled_elaboration,
-        model_info={"model": "stub", "temperature": 0, "provider": "local"},
+        model_info=llm_result.model_info,
         input_payload=section.content,
         output_text=elaboration,
     )
@@ -139,13 +141,14 @@ def _run_author(args: argparse.Namespace) -> int:
     input("Press enter once draft edits are saved...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
     compiled_extraction = _compile_prompt(extract_prompt, draft_input, "DRAFT")
-    extracted = _invoke_llm_stub(compiled_extraction, draft_input, mode="extract")
+    llm_result = _invoke_llm(compiled_extraction)
+    extracted = llm_result.output_text
     run_dir = character_dir / "runs" / authoring.build_run_id(slug)
     authoring.write_run_log(
         run_dir,
         extract_prompt,
         compiled_extraction,
-        model_info={"model": "stub", "temperature": 0, "provider": "local"},
+        model_info=llm_result.model_info,
         input_payload=draft_input,
         output_text=extracted,
     )
@@ -279,35 +282,9 @@ def _compile_prompt(prompt_path: Path, input_text: str, input_label: str) -> str
     return f"{prompt_text}\n\n{input_label}:\n{normalized_input}\n"
 
 
-def _invoke_llm_stub(compiled_prompt: str, input_text: str, mode: str) -> str:
-    if mode == "extract":
-        short_desc = _first_nonempty_line(input_text)[:140]
-        payload = {
-            "name": "",
-            "slug": "",
-            "description": input_text.strip(),
-            "personality": "",
-            "scenario": "",
-            "first_mes": "",
-            "mes_example": "",
-            "system_prompt": "",
-            "creator_notes": "",
-            "post_history_instructions": "",
-            "creator": "",
-            "character_version": "1.0",
-            "tags": [],
-        }
-        spec_text = authoring.json_dumps(payload).strip()
-        return f"{spec_text}\n---SHORT_DESCRIPTION---\n{short_desc}\n"
-    return input_text.strip() + "\n"
-
-
-def _first_nonempty_line(text: str) -> str:
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped:
-            return stripped
-    return ""
+def _invoke_llm(compiled_prompt: str) -> llm_client.LLMResult:
+    config = llm_client.load_llm_config()
+    return llm_client.invoke_llm(compiled_prompt, config)
 
 
 def _prompt_text(label: str, default: str | None = None) -> str:
