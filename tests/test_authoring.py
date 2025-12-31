@@ -38,7 +38,7 @@ def test_author_prompt_selection_and_run_log(tmp_path: Path) -> None:
     run_dir = tmp_path / "runs" / "run-1"
     authoring.write_run_log(
         run_dir,
-        prompt_path,
+        [prompt_path],
         prompt_compiled="Compiled prompt",
         model_info={"model": "stub"},
         input_payload="input",
@@ -61,6 +61,23 @@ def test_ensure_preliminary_draft_appends(tmp_path: Path) -> None:
     draft_path = authoring.ensure_preliminary_draft(character_dir, "Second draft\n", run_id="run-2")
     expected = "First draft\n\n---\nElaboration appended run-2\n---\n\nSecond draft\n"
     assert draft_path.read_text(encoding="utf-8") == expected
+
+
+def test_list_and_delete_character_dirs(tmp_path: Path) -> None:
+    sources_root = tmp_path / "sources"
+    characters_root = sources_root / "characters"
+    (characters_root / "alpha").mkdir(parents=True)
+    (characters_root / "bravo").mkdir(parents=True)
+    extra_file = sources_root / "notes.md"
+    extra_file.write_text("Keep me", encoding="utf-8")
+
+    dirs = authoring.list_character_dirs(sources_root)
+    assert {path.name for path in dirs} == {"alpha", "bravo"}
+
+    authoring.delete_character_dirs(dirs)
+    assert not (characters_root / "alpha").exists()
+    assert not (characters_root / "bravo").exists()
+    assert extra_file.exists()
 
 
 def test_try_open_in_editor_uses_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

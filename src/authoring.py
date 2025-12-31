@@ -145,9 +145,35 @@ def list_prompt_templates(prompts_root: Path, category: str) -> list[Path]:
     return sorted(path for path in template_dir.iterdir() if path.is_file())
 
 
+def list_character_dirs(sources_root: Path) -> list[Path]:
+    characters_root = sources_root / "characters"
+    if not characters_root.exists():
+        return []
+    resolved_root = characters_root.resolve()
+    directories: list[Path] = []
+    for path in sorted(characters_root.iterdir()):
+        if path.is_symlink():
+            continue
+        if not path.is_dir():
+            continue
+        resolved_path = path.resolve()
+        if resolved_path.parent != resolved_root:
+            continue
+        directories.append(path)
+    return directories
+
+
+def delete_character_dirs(dirs: list[Path]) -> None:
+    for path in dirs:
+        if path.is_symlink():
+            continue
+        if path.is_dir():
+            shutil.rmtree(path)
+
+
 def write_run_log(
     run_dir: Path,
-    prompt_path: Path,
+    prompt_paths: Iterable[Path],
     prompt_compiled: str,
     model_info: dict[str, Any],
     input_payload: str,
@@ -155,8 +181,11 @@ def write_run_log(
 ) -> None:
     run_dir.mkdir(parents=True, exist_ok=True)
     prompt_ref = run_dir / "prompt_ref.txt"
-    prompt_hash = hashlib.sha256(prompt_path.read_bytes()).hexdigest()
-    prompt_ref.write_text(f"{prompt_path.as_posix()}\nsha256:{prompt_hash}\n", encoding="utf-8")
+    prompt_entries: list[str] = []
+    for prompt_path in prompt_paths:
+        prompt_hash = hashlib.sha256(prompt_path.read_bytes()).hexdigest()
+        prompt_entries.append(f"{prompt_path.as_posix()}\nsha256:{prompt_hash}")
+    prompt_ref.write_text("\n\n".join(prompt_entries) + "\n", encoding="utf-8")
     (run_dir / "prompt_compiled.md").write_text(prompt_compiled, encoding="utf-8")
 
     (run_dir / "model.json").write_text(
@@ -329,6 +358,15 @@ def audit_character(sources_root: Path, slug: str, strict: bool = False) -> Audi
         if not entries:
             warnings.append(f"fragments/ is empty for {slug}; include .keep placeholder.")
 
+    prompt_refs = _collect_prompt_refs(character_dir / "runs")
+    for family in ("tone", "voice", "style"):
+        if not _has_prompt_family(prompt_refs, family):
+            message = f"Missing {family} prompt selection for {slug}."
+            if status == "locked":
+                errors.append(message)
+            else:
+                warnings.append(message)
+
     if strict and warnings:
         errors.extend(warnings)
         warnings = []
@@ -352,3 +390,28 @@ def extract_output_sections(output_text: str) -> tuple[str, str]:
         spec_text = output_text[: match.start()].strip()
         return spec_text + "\n", short_text
     return output_text.strip() + "\n", ""
+
+
+def _collect_prompt_refs(runs_dir: Path) -> list[str]:
+    if not runs_dir.exists():
+        return []
+    refs: list[str] = []
+    for run_dir in sorted(path for path in runs_dir.iterdir() if path.is_dir()):
+        prompt_ref_path = run_dir / "prompt_ref.txt"
+        if not prompt_ref_path.exists():
+            continue
+        for line in prompt_ref_path.read_text(encoding="utf-8").splitlines():
+            entry = line.strip()
+            if not entry or entry.startswith("sha256:"):
+                continue
+            refs.append(entry)
+    return refs
+
+
+def _has_prompt_family(prompt_refs: Iterable[str], family: str) -> bool:
+    marker = f"/prompts/{family}/"
+    marker_alt = f"prompts/{family}/"
+    for entry in prompt_refs:
+        if marker in entry or marker_alt in entry:
+            return True
+    return False
