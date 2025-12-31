@@ -39,7 +39,8 @@ This plan defines an **interactive, LLM-assisted authoring tool** and a **determ
 - **API key input method (env-only):**
   - `BOTPARTS_LLM_API_KEY` (required for authoring LLM calls; *no CLI flags* for secrets).
 - **Placeholders (existing):**
-  - `--placeholders` / `BOTPARTS_PLACEHOLDERS` remain **build-only** (never authoring).
+  - `--placeholders` / `BOTPARTS_PLACEHOLDERS` remain **build-only** (layout/testing only; never authoring).
+  - Authoring must never invent canonical content or fragments; scaffolding may only create empty files/directories.
 - **Timestamps (existing):**
   - `--include-timestamps` / `BOTPARTS_INCLUDE_TIMESTAMPS` (build only; default off) controls timestamps in `dist/REPORT.md` and `dist/src/data/index.json`.
 
@@ -90,7 +91,7 @@ sources/characters/<slug>/
    - Input file: `sources/staging_drafts.md` (or `sources/staging_drafts/*.md`; confirm naming).
    - Parse headings (`#`, `##`, etc.) to build a concept list.
 2. **Prompt for heading name**
-   - If not exact match, show top-N fuzzy matches and require numeric selection.
+   - If not exact match, show top-N (e.g., 5) fuzzy matches and require explicit numeric selection; allow abort with no side effects; never auto-select.
 3. **Prompt for slug/package name**
    - Validate uniqueness against `sources/characters/`.
    - Create scaffold at `sources/characters/<slug>/` with required files.
@@ -120,7 +121,7 @@ sources/characters/<slug>/
    - Reads: `meta.yaml` to show paths.
    - Writes: none (opens file pointers, minimal automation).
 3. **Export character**
-   - Writes: `.exports/<slug>/` (gitignored) for optional external use.
+   - Writes: `.exports/<slug>/` (gitignored) for optional external use; export is optional, does not modify `dist/`, and is separate from `bp build`.
    - Validations: ensure canonical fields exist.
 4. **Duplicate character**
    - Reads: existing `sources/characters/<slug>/`.
@@ -213,7 +214,7 @@ prompts/
 
 **Phase 4: Variants + fragments manifests**
 - Add deterministic mapping of `variants/` into dist fragments and manifests.
-- Ensure `dist/src/data/fragments/` and per-character `fragments/` remain non-empty.
+- Ensure `dist/src/data/fragments/` and per-character `fragments/` directories exist even when empty; manifests may list zero fragments.
 
 **Phase 5: Export tooling (optional)**
 - Add `.exports/` outputs for optional external sharing, gitignored.
