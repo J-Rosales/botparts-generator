@@ -1,0 +1,1 @@
+"""Botparts generator package."""

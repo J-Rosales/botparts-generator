@@ -6,12 +6,15 @@ import os
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Iterable
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 @pytest.fixture(scope="session")
@@ -45,39 +48,11 @@ def _run_subprocess(command: str, cwd: Path) -> None:
 
 
 def _fallback_build(workspace: Path) -> None:
-    sources_root = workspace / "sources"
-    output_root = workspace / "dist" / "src" / "data"
-    if output_root.exists():
-        shutil.rmtree(output_root)
-    output_root.mkdir(parents=True, exist_ok=True)
+    from src.generator import build_site_data
 
-    site_seed = sources_root / "site-seed" / "index.json"
-    if site_seed.exists():
-        shutil.copy2(site_seed, output_root / "index.json")
-
-    characters_root = sources_root / "characters"
-    if not characters_root.exists():
-        return
-
-    for character_dir in characters_root.iterdir():
-        if not character_dir.is_dir():
-            continue
-        manifest_source = character_dir / "manifest.json"
-        if not manifest_source.exists():
-            continue
-        dest_dir = output_root / "characters" / character_dir.name
-        dest_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(manifest_source, dest_dir / "manifest.json")
-
-        fragments_source = character_dir / "fragments"
-        fragments_dest = dest_dir / "fragments"
-        fragments_dest.mkdir(parents=True, exist_ok=True)
-        if fragments_source.exists():
-            for fragment in fragments_source.iterdir():
-                if fragment.is_file():
-                    shutil.copy2(fragment, fragments_dest / fragment.name)
-        if not any(fragments_dest.iterdir()):
-            (fragments_dest / ".keep").write_text("", encoding="utf-8")
+    placeholders = int(os.environ.get("BOTPARTS_PLACEHOLDERS", "0") or "0")
+    include_timestamps = os.environ.get("BOTPARTS_INCLUDE_TIMESTAMPS", "0") == "1"
+    build_site_data(workspace, placeholders=placeholders, include_timestamps=include_timestamps)
 
 
 @pytest.fixture()
