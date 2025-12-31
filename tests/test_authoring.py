@@ -38,11 +38,13 @@ def test_author_prompt_selection_and_run_log(tmp_path: Path) -> None:
     authoring.write_run_log(
         run_dir,
         prompt_path,
+        prompt_compiled="Compiled prompt",
         model_info={"model": "stub"},
         input_payload="input",
         output_text="output",
     )
     assert (run_dir / "prompt_ref.txt").exists()
+    assert (run_dir / "prompt_compiled.md").exists()
     assert (run_dir / "model.json").exists()
     assert (run_dir / "input_hash.txt").exists()
     assert (run_dir / "output.md").exists()

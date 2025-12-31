@@ -141,6 +141,7 @@ def list_prompt_templates(prompts_root: Path, category: str) -> list[Path]:
 def write_run_log(
     run_dir: Path,
     prompt_path: Path,
+    prompt_compiled: str,
     model_info: dict[str, Any],
     input_payload: str,
     output_text: str,
@@ -149,6 +150,7 @@ def write_run_log(
     prompt_ref = run_dir / "prompt_ref.txt"
     prompt_hash = hashlib.sha256(prompt_path.read_bytes()).hexdigest()
     prompt_ref.write_text(f"{prompt_path.as_posix()}\nsha256:{prompt_hash}\n", encoding="utf-8")
+    (run_dir / "prompt_compiled.md").write_text(prompt_compiled, encoding="utf-8")
 
     (run_dir / "model.json").write_text(
         json_dumps(model_info),
