@@ -51,5 +51,13 @@ When working in this repo:
 ## Generator Flags (Local Dev)
 - `--placeholders <N>` or `BOTPARTS_PLACEHOLDERS=<N>`: emit N deterministic placeholder profiles for layout testing. Default: 0.
 
+## Local Authoring Secrets
+Authoring commands (e.g. `bp author`, `bp audit`) can load local environment variables from a repo-root `.secrets` file.
+
+1. Copy `.secrets.example` to `.secrets`.
+2. Fill in your local values (e.g. `BOTPARTS_LLM_API_KEY`).
+
+The `.secrets` file is gitignored and **never** read during deterministic builds (`bp build`).
+
 ## Tag Partitioning Rule
 - Tags prefixed with `spoiler:` are stripped of the prefix and emitted as `spoilerTags` (stored under `x`), while the remaining tags stay in `tags`.
