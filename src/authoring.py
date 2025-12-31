@@ -164,6 +164,29 @@ def write_run_log(
     (run_dir / "output.md").write_text(output_text, encoding="utf-8")
 
 
+def ensure_preliminary_draft(
+    character_dir: Path,
+    elaboration_text: str,
+    run_id: str | None = None,
+) -> Path:
+    draft_path = character_dir / "preliminary_draft.md"
+    cleaned_text = elaboration_text.rstrip("\n") + "\n"
+    if not draft_path.exists():
+        draft_path.write_text(cleaned_text, encoding="utf-8")
+        return draft_path
+
+    existing = draft_path.read_text(encoding="utf-8")
+    if not existing.strip():
+        draft_path.write_text(cleaned_text, encoding="utf-8")
+        return draft_path
+
+    # Append with a delimiter to avoid overwriting any author edits.
+    run_label = run_id or "unknown-run"
+    delimiter = f"\n\n---\nElaboration appended {run_label}\n---\n\n"
+    draft_path.write_text(existing.rstrip() + delimiter + cleaned_text, encoding="utf-8")
+    return draft_path
+
+
 def json_dumps(payload: Any) -> str:
     import json
 
