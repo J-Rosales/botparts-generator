@@ -9,6 +9,7 @@ from typing import Iterable
 
 from src import authoring
 from src.generator import build_site_data
+from src.secrets import load_secrets_file
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -72,9 +73,15 @@ def _run_build(args: argparse.Namespace) -> int:
 
 
 def _run_author(args: argparse.Namespace) -> int:
-    api_key = os.environ.get("BOTPARTS_LLM_API_KEY")
-    if not api_key:
-        print("BOTPARTS_LLM_API_KEY is required for authoring runs.", file=sys.stderr)
+    load_secrets_file()
+    try:
+        _ = os.environ["BOTPARTS_LLM_API_KEY"]
+    except KeyError:
+        print(
+            "BOTPARTS_LLM_API_KEY is required for authoring runs. "
+            "Set it in your environment or copy .secrets.example to .secrets.",
+            file=sys.stderr,
+        )
         return 2
 
     workspace = Path.cwd()
@@ -138,6 +145,7 @@ def _run_author(args: argparse.Namespace) -> int:
 
 
 def _run_audit(args: argparse.Namespace) -> int:
+    load_secrets_file()
     sources_root = Path.cwd() / "sources"
     if args.audit_command == "character":
         audit = authoring.audit_character(sources_root, args.slug, strict=args.strict)
