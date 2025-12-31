@@ -135,7 +135,8 @@ def _run_author(args: argparse.Namespace) -> int:
     run_output_rel = (run_dir / "output.md").relative_to(Path.cwd())
     print(f"Edit: {preliminary_rel.as_posix()}")
     print(f"Generated output preserved at: {run_output_rel.as_posix()}")
-    input("Press Enter once your edits are saved...")
+    authoring.try_open_in_editor(preliminary_path)
+    input("Press enter once draft edits are saved...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
     compiled_extraction = _compile_prompt(extract_prompt, draft_input, "DRAFT")
     extracted = _invoke_llm_stub(compiled_extraction, draft_input, mode="extract")
@@ -236,8 +237,7 @@ def _prompt_slug(title: str, characters_root: Path) -> str | None:
     while True:
         suffix = f" [{default_slug}]" if default_slug else ""
         response = input(
-            "Enter character slug (lowercase letters, numbers, hyphens; "
-            "min 3 chars; example: kemono-scout)"
+            "Enter character slug (example: naive-scout)"
             f"{suffix} (press Enter to accept default, or type 'q' to cancel): "
         ).strip()
         if response.lower() == "q":

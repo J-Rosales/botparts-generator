@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -60,6 +61,31 @@ def test_ensure_preliminary_draft_appends(tmp_path: Path) -> None:
     draft_path = authoring.ensure_preliminary_draft(character_dir, "Second draft\n", run_id="run-2")
     expected = "First draft\n\n---\nElaboration appended run-2\n---\n\nSecond draft\n"
     assert draft_path.read_text(encoding="utf-8") == expected
+
+
+def test_try_open_in_editor_uses_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    target = tmp_path / "preliminary_draft.md"
+    calls: list[list[str]] = []
+
+    def fake_popen(cmd: list[str]) -> SimpleNamespace:
+        calls.append(cmd)
+        return SimpleNamespace()
+
+    monkeypatch.setenv("BOTPARTS_EDITOR", "echo --reuse-window")
+    monkeypatch.setattr(authoring.subprocess, "Popen", fake_popen)
+
+    assert authoring.try_open_in_editor(target) is True
+    assert calls == [["echo", "--reuse-window", str(target)]]
+
+
+def test_try_open_in_editor_returns_false_without_editor(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("BOTPARTS_EDITOR", raising=False)
+    monkeypatch.delenv("EDITOR", raising=False)
+    monkeypatch.setattr(authoring.shutil, "which", lambda _: None)
+
+    assert authoring.try_open_in_editor(tmp_path / "preliminary_draft.md") is False
 
 
 @pytest.mark.parametrize("status,expect_error", [("draft", False), ("locked", True)])
