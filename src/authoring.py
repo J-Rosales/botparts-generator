@@ -14,6 +14,15 @@ from typing import Any, Iterable
 
 HEADING_PATTERN = re.compile(r"^(?P<level>#+)\s+(?P<title>.+?)\s*$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+FRAGMENT_SECTION_TARGETS = {
+    "description": ("spec_v2", "description.md"),
+    "system_prompt": ("spec_v2", "system_prompt.md"),
+    "first_message": ("spec_v2", "first_message.md"),
+    "scenario": ("spec_v2", "scenario.md"),
+    "post_history_instructions": ("spec_v2", "post_history_instructions.md"),
+    "short_description": ("site", "shortDescription.md"),
+    "shortdescription": ("site", "shortDescription.md"),
+}
 
 
 @dataclass(frozen=True)
@@ -116,6 +125,10 @@ def scaffold_character(
     fragments_dir = character_dir / "fragments"
     fragments_dir.mkdir(parents=True, exist_ok=True)
     (fragments_dir / ".keep").write_text("", encoding="utf-8")
+    (fragments_dir / "spec_v2").mkdir(parents=True, exist_ok=True)
+    (fragments_dir / "spec_v2" / ".keep").write_text("", encoding="utf-8")
+    (fragments_dir / "site").mkdir(parents=True, exist_ok=True)
+    (fragments_dir / "site" / ".keep").write_text("", encoding="utf-8")
     (character_dir / "runs").mkdir(parents=True, exist_ok=True)
 
     meta_path = character_dir / "meta.yaml"
@@ -392,6 +405,36 @@ def extract_output_sections(output_text: str) -> tuple[str, str]:
     return output_text.strip() + "\n", ""
 
 
+def parse_fragment_sections(output_text: str) -> dict[str, str]:
+    sections = parse_staging_sections(output_text)
+    fragments: dict[str, str] = {}
+    for section in sections:
+        normalized = _normalize_fragment_title(section.title)
+        if normalized not in FRAGMENT_SECTION_TARGETS:
+            continue
+        fragments[normalized] = section.content.strip() + "\n"
+    return fragments
+
+
+def write_extracted_fragments(character_dir: Path, output_text: str) -> list[str]:
+    fragments = parse_fragment_sections(output_text)
+    if not fragments:
+        return ["No fragment sections found in extraction output; skipping fragment writes."]
+
+    fragments_root = character_dir / "fragments"
+    spec_v2_dir = fragments_root / "spec_v2"
+    site_dir = fragments_root / "site"
+    spec_v2_dir.mkdir(parents=True, exist_ok=True)
+    site_dir.mkdir(parents=True, exist_ok=True)
+
+    for key, text in fragments.items():
+        target_group, filename = FRAGMENT_SECTION_TARGETS[key]
+        target_dir = spec_v2_dir if target_group == "spec_v2" else site_dir
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / filename).write_text(text, encoding="utf-8")
+    return []
+
+
 def _collect_prompt_refs(runs_dir: Path) -> list[str]:
     if not runs_dir.exists():
         return []
@@ -415,3 +458,8 @@ def _has_prompt_family(prompt_refs: Iterable[str], family: str) -> bool:
         if marker in entry or marker_alt in entry:
             return True
     return False
+
+
+def _normalize_fragment_title(title: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "_", title.strip().lower())
+    return normalized.strip("_")

@@ -180,6 +180,9 @@ def _run_author(args: argparse.Namespace) -> int:
     spec_text, short_desc = authoring.extract_output_sections(extracted)
     (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
     (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
+    fragment_warnings = authoring.write_extracted_fragments(character_dir, extracted)
+    for warning in fragment_warnings:
+        print(f"Warning: {warning}", file=sys.stderr)
 
     audit = authoring.audit_character(sources_root, slug, strict=False)
     _print_audit(audit)
