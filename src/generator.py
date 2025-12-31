@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from src import authoring
+
 GENERATOR_VERSION = "0.1.0"
 SITE_ONLY_FIELDS = {
     "shortDescription": "",
@@ -189,6 +191,73 @@ def _build_fragment_files(
     return fragments
 
 
+def _build_variant_fragments(
+    variants_root: Path | None,
+    fragments_dir: Path,
+    created_dirs: set[Path],
+) -> dict[str, str]:
+    variants: dict[str, str] = {}
+    if variants_root is None or not variants_root.exists():
+        return variants
+    for style_dir in sorted(path for path in variants_root.iterdir() if path.is_dir()):
+        spec_path = style_dir / "spec_v2_fields.md"
+        if not spec_path.exists():
+            continue
+        relative_target = Path("fragments") / "variants" / style_dir.name / "spec_v2_fields.md"
+        target_path = fragments_dir / "variants" / style_dir.name
+        _ensure_dir(target_path, created_dirs)
+        (target_path / "spec_v2_fields.md").write_text(spec_path.read_text(encoding="utf-8"), encoding="utf-8")
+        variants[style_dir.name] = str(relative_target.as_posix())
+    return variants
+
+
+def _merge_manifest_data(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if key in {"content", "provenance", "x"} and isinstance(value, dict):
+            current = merged.get(key)
+            if isinstance(current, dict):
+                nested = dict(current)
+                nested.update(value)
+                merged[key] = nested
+            else:
+                merged[key] = dict(value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _load_authored_manifest(character_dir: Path, warnings: list[str]) -> dict[str, Any] | None:
+    canonical_dir = character_dir / "canonical"
+    spec_path = canonical_dir / "spec_v2_fields.md"
+    if not spec_path.exists():
+        return None
+    spec_fields = authoring.load_spec_fields(spec_path)
+    if not spec_fields:
+        return None
+    if not isinstance(spec_fields, dict):
+        warnings.append(f"[{character_dir.name}] spec_v2_fields.md must contain a JSON object.")
+        return None
+    meta_path = character_dir / "meta.yaml"
+    if meta_path.exists():
+        meta = authoring.parse_meta_yaml(meta_path)
+    else:
+        meta = {}
+    slug = spec_fields.get("slug") or meta.get("slug")
+    if slug:
+        spec_fields["slug"] = slug
+    if not spec_fields.get("name"):
+        display_name = meta.get("displayName")
+        if display_name:
+            spec_fields["name"] = display_name
+    short_description = authoring.load_short_description(canonical_dir / "shortDescription.md")
+    if short_description:
+        spec_fields.setdefault("x", {})
+        if isinstance(spec_fields["x"], dict):
+            spec_fields["x"].setdefault("shortDescription", short_description)
+    return spec_fields
+
+
 def _map_modules(source_manifest: dict[str, Any]) -> list[dict[str, Any]]:
     modules: list[dict[str, Any]] = []
     for module in source_manifest.get("modules", []) or []:
@@ -334,10 +403,17 @@ def build_site_data(
             if not character_dir.is_dir():
                 continue
             manifest_path = character_dir / "manifest.json"
-            if not manifest_path.exists():
-                warnings.append(f"[{character_dir.name}] Missing manifest.json in sources.")
-                continue
-            source_manifest = _load_json(manifest_path)
+            authored_manifest = _load_authored_manifest(character_dir, warnings)
+            source_manifest: dict[str, Any]
+            if manifest_path.exists():
+                source_manifest = _load_json(manifest_path)
+                if authored_manifest:
+                    source_manifest = _merge_manifest_data(source_manifest, authored_manifest)
+            else:
+                if not authored_manifest:
+                    warnings.append(f"[{character_dir.name}] Missing manifest.json in sources.")
+                    continue
+                source_manifest = authored_manifest
             source_manifest["_source_dir"] = character_dir
             character_sources.append(source_manifest)
 
@@ -404,14 +480,23 @@ def build_site_data(
         else:
             site_fields["placeholder"] = False
 
-        manifest_x = dict(source_manifest.get("x") or {})
-        manifest_x.update(site_fields)
-
         content = source_manifest.get("content", {}) if isinstance(source_manifest.get("content"), dict) else {}
         character_dir = output_root / "characters" / slug
         _ensure_dir(character_dir, created_dirs)
         fragments_dir = character_dir / "fragments"
         fragments = _build_fragment_files(content, fragments_dir, created_dirs)
+        source_dir = source_manifest.get("_source_dir")
+        variants_root = Path(source_dir) / "variants" if source_dir else None
+        variants = _build_variant_fragments(
+            variants_root,
+            fragments_dir,
+            created_dirs,
+        )
+
+        manifest_x = dict(source_manifest.get("x") or {})
+        manifest_x.update(site_fields)
+        if variants:
+            manifest_x["variants"] = variants
 
         base = {"fragments": fragments}
         modules = _map_modules(source_manifest)
