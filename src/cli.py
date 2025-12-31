@@ -117,10 +117,10 @@ def _run_author(args: argparse.Namespace) -> int:
     elaborate_prompt = _select_prompt(prompts_root, args.prompt_category)
     extract_prompt = _select_prompt(prompts_root, args.extract_category)
 
-    preliminary_path = character_dir / "preliminary_draft.md"
     compiled_elaboration = _compile_prompt(elaborate_prompt, section.content, "CONCEPT SNIPPET")
     elaboration = _invoke_llm_stub(compiled_elaboration, section.content, mode="elaborate")
-    run_dir = character_dir / "runs" / authoring.build_run_id(slug)
+    run_id = authoring.build_run_id(slug)
+    run_dir = character_dir / "runs" / run_id
     authoring.write_run_log(
         run_dir,
         elaborate_prompt,
@@ -129,9 +129,13 @@ def _run_author(args: argparse.Namespace) -> int:
         input_payload=section.content,
         output_text=elaboration,
     )
-    preliminary_path.write_text(elaboration, encoding="utf-8")
+    preliminary_path = authoring.ensure_preliminary_draft(character_dir, elaboration, run_id=run_id)
 
-    input("Edit preliminary_draft.md as needed, then press Enter to continue...")
+    preliminary_rel = preliminary_path.relative_to(Path.cwd())
+    run_output_rel = (run_dir / "output.md").relative_to(Path.cwd())
+    print(f"Edit: {preliminary_rel.as_posix()}")
+    print(f"Generated output preserved at: {run_output_rel.as_posix()}")
+    input("Press Enter once your edits are saved...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
     compiled_extraction = _compile_prompt(extract_prompt, draft_input, "DRAFT")
     extracted = _invoke_llm_stub(compiled_extraction, draft_input, mode="extract")

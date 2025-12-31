@@ -50,6 +50,18 @@ def test_author_prompt_selection_and_run_log(tmp_path: Path) -> None:
     assert (run_dir / "output.md").exists()
 
 
+def test_ensure_preliminary_draft_appends(tmp_path: Path) -> None:
+    sources_root = tmp_path / "sources"
+    character_dir = authoring.scaffold_character(sources_root, "alpha-bot", "Alpha Bot")
+    draft_path = authoring.ensure_preliminary_draft(character_dir, "First draft\n", run_id="run-1")
+    assert draft_path.exists()
+    assert draft_path.read_text(encoding="utf-8") == "First draft\n"
+
+    draft_path = authoring.ensure_preliminary_draft(character_dir, "Second draft\n", run_id="run-2")
+    expected = "First draft\n\n---\nElaboration appended run-2\n---\n\nSecond draft\n"
+    assert draft_path.read_text(encoding="utf-8") == expected
+
+
 @pytest.mark.parametrize("status,expect_error", [("draft", False), ("locked", True)])
 def test_audit_validations(tmp_path: Path, status: str, expect_error: bool) -> None:
     sources_root = tmp_path / "sources"
