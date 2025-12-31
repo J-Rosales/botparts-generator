@@ -103,11 +103,13 @@ def _run_author(args: argparse.Namespace) -> int:
     extract_prompt = _select_prompt(prompts_root, args.extract_category)
 
     preliminary_path = character_dir / "preliminary_draft.md"
-    elaboration = _invoke_llm_stub(elaborate_prompt, section.content)
+    compiled_elaboration = _compile_prompt(elaborate_prompt, section.content, "CONCEPT SNIPPET")
+    elaboration = _invoke_llm_stub(compiled_elaboration, section.content, mode="elaborate")
     run_dir = character_dir / "runs" / authoring.build_run_id(slug)
     authoring.write_run_log(
         run_dir,
         elaborate_prompt,
+        compiled_elaboration,
         model_info={"model": "stub", "temperature": 0, "provider": "local"},
         input_payload=section.content,
         output_text=elaboration,
@@ -116,11 +118,13 @@ def _run_author(args: argparse.Namespace) -> int:
 
     input("Edit preliminary_draft.md as needed, then press Enter to continue...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
-    extracted = _invoke_llm_stub(extract_prompt, draft_input)
+    compiled_extraction = _compile_prompt(extract_prompt, draft_input, "DRAFT")
+    extracted = _invoke_llm_stub(compiled_extraction, draft_input, mode="extract")
     run_dir = character_dir / "runs" / authoring.build_run_id(slug)
     authoring.write_run_log(
         run_dir,
         extract_prompt,
+        compiled_extraction,
         model_info={"model": "stub", "temperature": 0, "provider": "local"},
         input_payload=draft_input,
         output_text=extracted,
@@ -226,10 +230,33 @@ def _select_prompt(prompts_root: Path, category: str) -> Path:
     return templates[choice - 1]
 
 
-def _invoke_llm_stub(prompt_path: Path, input_text: str) -> str:
+def _compile_prompt(prompt_path: Path, input_text: str, input_label: str) -> str:
     prompt_text = prompt_path.read_text(encoding="utf-8").strip()
-    short_desc = _first_nonempty_line(input_text)[:140]
-    return f\"{prompt_text}\\n\\n{input_text.strip()}\\n\\n---SHORT_DESCRIPTION---\\n{short_desc}\\n\"
+    normalized_input = input_text.strip()
+    return f"{prompt_text}\n\n{input_label}:\n{normalized_input}\n"
+
+
+def _invoke_llm_stub(compiled_prompt: str, input_text: str, mode: str) -> str:
+    if mode == "extract":
+        short_desc = _first_nonempty_line(input_text)[:140]
+        payload = {
+            "name": "",
+            "slug": "",
+            "description": input_text.strip(),
+            "personality": "",
+            "scenario": "",
+            "first_mes": "",
+            "mes_example": "",
+            "system_prompt": "",
+            "creator_notes": "",
+            "post_history_instructions": "",
+            "creator": "",
+            "character_version": "1.0",
+            "tags": [],
+        }
+        spec_text = authoring.json_dumps(payload).strip()
+        return f"{spec_text}\n---SHORT_DESCRIPTION---\n{short_desc}\n"
+    return input_text.strip() + "\n"
 
 
 def _first_nonempty_line(text: str) -> str:
@@ -241,17 +268,17 @@ def _first_nonempty_line(text: str) -> str:
 
 
 def _prompt_text(label: str, default: str | None = None) -> str:
-    suffix = f\" [{default}]\" if default else \"\"
-    response = input(f\"{label}{suffix}: \").strip()
-    return response or (default or \"\")
+    suffix = f" [{default}]" if default else ""
+    response = input(f"{label}{suffix}: ").strip()
+    return response or (default or "")
 
 
 def _print_audit(audit: authoring.AuditResult) -> None:
     for warning in audit.warnings:
-        print(f\"WARNING: {warning}\")
+        print(f"WARNING: {warning}")
     for error in audit.errors:
-        print(f\"ERROR: {error}\")
+        print(f"ERROR: {error}")
 
 
-if __name__ == \"__main__\":
+if __name__ == "__main__":
     raise SystemExit(main())
