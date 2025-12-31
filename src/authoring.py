@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
+import shlex
+import shutil
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -185,6 +189,26 @@ def ensure_preliminary_draft(
     delimiter = f"\n\n---\nElaboration appended {run_label}\n---\n\n"
     draft_path.write_text(existing.rstrip() + delimiter + cleaned_text, encoding="utf-8")
     return draft_path
+
+
+def try_open_in_editor(path: Path) -> bool:
+    editor_cmd = os.environ.get("BOTPARTS_EDITOR") or os.environ.get("EDITOR")
+    if editor_cmd:
+        cmd = shlex.split(editor_cmd, posix=os.name != "nt")
+    else:
+        code_path = shutil.which("code")
+        if not code_path:
+            return False
+        cmd = [code_path, "--reuse-window"]
+    if not cmd:
+        return False
+    cmd.append(str(path))
+    try:
+        subprocess.Popen(cmd)
+    except Exception:
+        print("Note: Unable to open editor automatically.")
+        return False
+    return True
 
 
 def json_dumps(payload: Any) -> str:
