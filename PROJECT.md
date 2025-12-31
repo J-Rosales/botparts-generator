@@ -47,3 +47,9 @@ When working in this repo:
 - Never embed site/UI concerns.
 - Never change schemas locally.
 - If a feature cannot be expressed with current schemas, produce a **schema change request** instead.
+
+## Generator Flags (Local Dev)
+- `--placeholders <N>` or `BOTPARTS_PLACEHOLDERS=<N>`: emit N deterministic placeholder profiles for layout testing. Default: 0.
+
+## Tag Partitioning Rule
+- Tags prefixed with `spoiler:` are stripped of the prefix and emitted as `spoilerTags` (stored under `x`), while the remaining tags stay in `tags`.
