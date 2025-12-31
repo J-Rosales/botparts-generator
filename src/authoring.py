@@ -80,8 +80,11 @@ def slugify(value: str) -> str:
 
 
 def validate_slug(slug: str) -> None:
-    if not SLUG_PATTERN.match(slug):
-        raise ValueError(f"Invalid slug '{slug}'. Use lowercase letters, digits, and hyphens.")
+    if len(slug) < 3 or not SLUG_PATTERN.match(slug):
+        raise ValueError(
+            "Invalid slug. Use at least 3 characters with lowercase letters, digits, "
+            "and hyphens only (example: kemono-scout)."
+        )
 
 
 def find_staging_draft_paths(sources_root: Path) -> list[Path]:

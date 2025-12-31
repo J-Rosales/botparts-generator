@@ -102,7 +102,15 @@ def _run_author(args: argparse.Namespace) -> int:
         return 1
 
     slug = _prompt_slug(section.title, sources_root / "characters")
-    display_name = _prompt_text("Display name", default=section.title)
+    if slug is None:
+        print("Aborted.", file=sys.stderr)
+        return 1
+    display_name = _prompt_text("Display name (text; press Enter to use default)", default=section.title)
+    print(f"Resolved slug: {slug}")
+    print(f"Resolved display name: {display_name}")
+    if not _prompt_confirm(f"About to create character folder: '{slug}'"):
+        print("Aborted.", file=sys.stderr)
+        return 1
     character_dir = authoring.scaffold_character(sources_root, slug, display_name)
     authoring.write_staging_snapshot(character_dir, section)
 
@@ -182,18 +190,19 @@ def _select_staging_file(sources_root: Path, provided: str | None) -> Path | Non
         return paths[0]
     for index, path in enumerate(paths, start=1):
         print(f"{index}. {path}")
-    selection = _prompt_text("Select staging file by number")
-    if not selection.isdigit():
-        return None
-    choice = int(selection)
-    if 1 <= choice <= len(paths):
-        return paths[choice - 1]
-    return None
+    choice = _prompt_numeric_choice(
+        f"Select staging file by number (1-{len(paths)})",
+        minimum=1,
+        maximum=len(paths),
+    )
+    return paths[choice - 1] if choice is not None else None
 
 
 def _choose_section(sections: list[authoring.HeadingSection]) -> authoring.HeadingSection | None:
     titles = [section.title for section in sections]
-    query = _prompt_text("Heading name")
+    query = _prompt_text("Heading title (exact text; press Enter to cancel)")
+    if not query:
+        return None
     exact = authoring.select_section_by_title(sections, query)
     if exact:
         return exact
@@ -203,20 +212,41 @@ def _choose_section(sections: list[authoring.HeadingSection]) -> authoring.Headi
     print("No exact match. Select one of the following:")
     for index, title in enumerate(matches, start=1):
         print(f"{index}. {title}")
-    selection = _prompt_text("Select heading by number")
-    if not selection.isdigit():
+    choice = _prompt_numeric_choice(
+        f"Select heading by number (1-{len(matches)})",
+        minimum=1,
+        maximum=len(matches),
+    )
+    if choice is None:
         return None
-    choice = int(selection)
-    if 1 <= choice <= len(matches):
-        return authoring.select_section_by_title(sections, matches[choice - 1])
-    return None
+    return authoring.select_section_by_title(sections, matches[choice - 1])
 
 
-def _prompt_slug(title: str, characters_root: Path) -> str:
+def _prompt_slug(title: str, characters_root: Path) -> str | None:
     default_slug = authoring.slugify(title)
+    if default_slug:
+        try:
+            authoring.validate_slug(default_slug)
+        except ValueError:
+            default_slug = ""
     while True:
-        slug = _prompt_text("Slug", default=default_slug)
-        authoring.validate_slug(slug)
+        suffix = f" [{default_slug}]" if default_slug else ""
+        response = input(
+            "Enter character slug (lowercase letters, numbers, hyphens; "
+            "min 3 chars; example: kemono-scout)"
+            f"{suffix} (press Enter to accept default, or type 'q' to cancel): "
+        ).strip()
+        if response.lower() == "q":
+            return None
+        slug = response or default_slug
+        if not slug:
+            print("Slug is required. Aborting.", file=sys.stderr)
+            return None
+        try:
+            authoring.validate_slug(slug)
+        except ValueError as exc:
+            print(f"{exc} Aborting.", file=sys.stderr)
+            return None
         if (characters_root / slug).exists():
             print(f"Slug '{slug}' already exists. Choose another.")
             continue
@@ -229,12 +259,13 @@ def _select_prompt(prompts_root: Path, category: str) -> Path:
         raise FileNotFoundError(f"No prompts found in {prompts_root / category}")
     for index, path in enumerate(templates, start=1):
         print(f"{index}. {path.name}")
-    selection = _prompt_text(f"Select prompt for {category} by number")
-    if not selection.isdigit():
+    choice = _prompt_numeric_choice(
+        f"Select prompt for {category} by number (1-{len(templates)})",
+        minimum=1,
+        maximum=len(templates),
+    )
+    if choice is None:
         raise ValueError("Prompt selection requires a numeric choice.")
-    choice = int(selection)
-    if not (1 <= choice <= len(templates)):
-        raise ValueError("Prompt selection out of range.")
     return templates[choice - 1]
 
 
@@ -279,6 +310,30 @@ def _prompt_text(label: str, default: str | None = None) -> str:
     suffix = f" [{default}]" if default else ""
     response = input(f"{label}{suffix}: ").strip()
     return response or (default or "")
+
+
+def _prompt_numeric_choice(label: str, minimum: int, maximum: int) -> int | None:
+    response = input(f"{label} (press Enter to cancel): ").strip()
+    if not response:
+        return None
+    if not response.isdigit():
+        print("Invalid input. Expected a numeric selection. Aborting.", file=sys.stderr)
+        return None
+    choice = int(response)
+    if not (minimum <= choice <= maximum):
+        print(f"Selection out of range ({minimum}-{maximum}). Aborting.", file=sys.stderr)
+        return None
+    return choice
+
+
+def _prompt_confirm(label: str) -> bool:
+    response = input(f"{label}. Type 'y' to confirm or 'n' to cancel: ").strip().lower()
+    if response == "y":
+        return True
+    if response == "n":
+        return False
+    print("Invalid confirmation input. Aborting.", file=sys.stderr)
+    return False
 
 
 def _print_audit(audit: authoring.AuditResult) -> None:
