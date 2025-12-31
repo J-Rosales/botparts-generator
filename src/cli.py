@@ -34,6 +34,24 @@ def main(argv: Iterable[str] | None = None) -> int:
     author_parser.add_argument("--staging-file", help="Optional staging drafts file path.")
     author_parser.add_argument("--prompt-category", default="elaborate")
     author_parser.add_argument("--extract-category", default="extract_fields")
+    author_parser.add_argument("--tone-category", default="tone")
+    author_parser.add_argument("--voice-category", default="voice")
+    author_parser.add_argument("--style-category", default="style")
+
+    clean_parser = subparsers.add_parser(
+        "author-clean",
+        help="Delete all authored character folders under sources/characters.",
+    )
+    clean_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="List deletions without removing anything.",
+    )
+    clean_parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip DELETE confirmation prompt.",
+    )
 
     audit_parser = subparsers.add_parser("audit", help="Audit authored sources.")
     audit_subparsers = audit_parser.add_subparsers(dest="audit_command", required=False)
@@ -47,6 +65,8 @@ def main(argv: Iterable[str] | None = None) -> int:
         return _run_build(args)
     if args.command == "author":
         return _run_author(args)
+    if args.command == "author-clean":
+        return _run_author_clean(args)
     if args.command == "audit":
         return _run_audit(args)
     return 1
@@ -109,26 +129,31 @@ def _run_author(args: argparse.Namespace) -> int:
     display_name = _prompt_text("Display name (text; press Enter to use default)", default=section.title)
     print(f"Resolved slug: {slug}")
     print(f"Resolved display name: {display_name}")
-    if not _prompt_confirm(f"About to create character folder: '{slug}'"):
-        print("Aborted.", file=sys.stderr)
-        return 1
     character_dir = authoring.scaffold_character(sources_root, slug, display_name)
     authoring.write_staging_snapshot(character_dir, section)
 
     elaborate_prompt = _select_prompt(prompts_root, args.prompt_category)
+    tone_prompt = _select_prompt(prompts_root, args.tone_category, allow_skip=True)
+    voice_prompt = _select_prompt(prompts_root, args.voice_category, allow_skip=True)
+    style_prompt = _select_prompt(prompts_root, args.style_category, allow_skip=True)
     extract_prompt = _select_prompt(prompts_root, args.extract_category)
 
-    compiled_elaboration = _compile_prompt(elaborate_prompt, section.content, "CONCEPT SNIPPET")
+    prompt_paths = [elaborate_prompt]
+    for optional_prompt in (tone_prompt, voice_prompt, style_prompt):
+        if optional_prompt is not None:
+            prompt_paths.append(optional_prompt)
+    staging_snapshot = (character_dir / "staging_snapshot.md").read_text(encoding="utf-8")
+    compiled_elaboration = _compile_prompt(prompt_paths, staging_snapshot, "CONCEPT SNIPPET")
     llm_result = _invoke_llm(compiled_elaboration)
     elaboration = llm_result.output_text
     run_id = authoring.build_run_id(slug)
     run_dir = character_dir / "runs" / run_id
     authoring.write_run_log(
         run_dir,
-        elaborate_prompt,
+        prompt_paths,
         compiled_elaboration,
         model_info=llm_result.model_info,
-        input_payload=section.content,
+        input_payload=staging_snapshot,
         output_text=elaboration,
     )
     preliminary_path = authoring.ensure_preliminary_draft(character_dir, elaboration, run_id=run_id)
@@ -140,13 +165,13 @@ def _run_author(args: argparse.Namespace) -> int:
     authoring.try_open_in_editor(preliminary_path)
     input("Press enter once draft edits are saved...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
-    compiled_extraction = _compile_prompt(extract_prompt, draft_input, "DRAFT")
+    compiled_extraction = _compile_prompt([extract_prompt], draft_input, "DRAFT")
     llm_result = _invoke_llm(compiled_extraction)
     extracted = llm_result.output_text
     run_dir = character_dir / "runs" / authoring.build_run_id(slug)
     authoring.write_run_log(
         run_dir,
-        extract_prompt,
+        [extract_prompt],
         compiled_extraction,
         model_info=llm_result.model_info,
         input_payload=draft_input,
@@ -161,6 +186,30 @@ def _run_author(args: argparse.Namespace) -> int:
     if not audit.ok:
         return 1
     print("Authoring complete. Run `bp build` to generate dist outputs.")
+    return 0
+
+
+def _run_author_clean(args: argparse.Namespace) -> int:
+    sources_root = Path.cwd() / "sources"
+    characters_root = sources_root / "characters"
+    print(f"Authoring characters root: {characters_root.resolve()}")
+    character_dirs = authoring.list_character_dirs(sources_root)
+    if not character_dirs:
+        print("No authored character directories found.")
+        return 0
+    print("Directories slated for deletion:")
+    for path in character_dirs:
+        print(f"- {path.resolve()}")
+    if args.dry_run:
+        print("Dry run complete; no deletions performed.")
+        return 0
+    if not args.yes:
+        token = input("Type DELETE to confirm deletion: ").strip()
+        if token != "DELETE":
+            print("Deletion aborted.", file=sys.stderr)
+            return 1
+    authoring.delete_character_dirs(character_dirs)
+    print("Deletion complete.")
     return 0
 
 
@@ -260,12 +309,26 @@ def _prompt_slug(title: str, characters_root: Path) -> str | None:
         return slug
 
 
-def _select_prompt(prompts_root: Path, category: str) -> Path:
+def _select_prompt(prompts_root: Path, category: str, allow_skip: bool = False) -> Path | None:
     templates = authoring.list_prompt_templates(prompts_root, category)
     if not templates:
+        if allow_skip:
+            print(f"No prompts found in {prompts_root / category}; skipping.")
+            return None
         raise FileNotFoundError(f"No prompts found in {prompts_root / category}")
+    if allow_skip:
+        print("0. Skip")
     for index, path in enumerate(templates, start=1):
         print(f"{index}. {path.name}")
+    if allow_skip:
+        choice = _prompt_numeric_choice_optional(
+            f"Select prompt for {category} by number",
+            minimum=1,
+            maximum=len(templates),
+        )
+        if choice is None:
+            return None
+        return templates[choice - 1]
     choice = _prompt_numeric_choice(
         f"Select prompt for {category} by number (1-{len(templates)})",
         minimum=1,
@@ -276,10 +339,11 @@ def _select_prompt(prompts_root: Path, category: str) -> Path:
     return templates[choice - 1]
 
 
-def _compile_prompt(prompt_path: Path, input_text: str, input_label: str) -> str:
-    prompt_text = prompt_path.read_text(encoding="utf-8").strip()
+def _compile_prompt(prompt_paths: Iterable[Path], input_text: str, input_label: str) -> str:
+    prompt_blocks = [path.read_text(encoding="utf-8").strip() for path in prompt_paths]
     normalized_input = input_text.strip()
-    return f"{prompt_text}\n\n{input_label}:\n{normalized_input}\n"
+    prompt_blocks.append(f"{input_label}:\n{normalized_input}")
+    return "\n\n".join(block for block in prompt_blocks if block) + "\n"
 
 
 def _invoke_llm(compiled_prompt: str) -> llm_client.LLMResult:
@@ -307,14 +371,18 @@ def _prompt_numeric_choice(label: str, minimum: int, maximum: int) -> int | None
     return choice
 
 
-def _prompt_confirm(label: str) -> bool:
-    response = input(f"{label}. Type 'y' to confirm or 'n' to cancel: ").strip().lower()
-    if response == "y":
-        return True
-    if response == "n":
-        return False
-    print("Invalid confirmation input. Aborting.", file=sys.stderr)
-    return False
+def _prompt_numeric_choice_optional(label: str, minimum: int, maximum: int) -> int | None:
+    response = input(f"{label} ({minimum}-{maximum}, 0 to skip; press Enter to skip): ").strip()
+    if not response or response == "0":
+        return None
+    if not response.isdigit():
+        print("Invalid input. Expected a numeric selection. Aborting.", file=sys.stderr)
+        return None
+    choice = int(response)
+    if not (minimum <= choice <= maximum):
+        print(f"Selection out of range ({minimum}-{maximum}). Aborting.", file=sys.stderr)
+        return None
+    return choice
 
 
 def _print_audit(audit: authoring.AuditResult) -> None:
