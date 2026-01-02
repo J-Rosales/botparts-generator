@@ -59,3 +59,52 @@ def test_output_completeness_empty_inputs(tmp_path: Path, repo_root: Path) -> No
     fragments_root = output_root / "fragments"
     assert fragments_root.exists()
     assert any(fragments_root.iterdir())
+
+
+def test_fragment_copy_and_manifest_inventory(tmp_path: Path, repo_root: Path) -> None:
+    workspace = _copy_repo_for_build(tmp_path, repo_root)
+    character_dir = workspace / "sources" / "characters" / "fragment-bot"
+    (character_dir / "canonical").mkdir(parents=True)
+    (character_dir / "fragments" / "spec_v2").mkdir(parents=True)
+    (character_dir / "fragments" / "site").mkdir(parents=True)
+    (character_dir / "variants" / "compact" / "spec_v2").mkdir(parents=True)
+
+    spec_payload = {"slug": "fragment-bot", "name": "Fragment Bot", "description": "Fragmented."}
+    (character_dir / "canonical" / "spec_v2_fields.md").write_text(
+        json.dumps(spec_payload, indent=2), encoding="utf-8"
+    )
+    (character_dir / "canonical" / "shortDescription.md").write_text(
+        "Canonical short description.\n", encoding="utf-8"
+    )
+
+    (character_dir / "fragments" / "spec_v2" / "description.md").write_text(
+        "Line one.\r\nLine two.\r\n", encoding="utf-8"
+    )
+    (character_dir / "variants" / "compact" / "spec_v2" / "description.md").write_text(
+        "Compact description.\n", encoding="utf-8"
+    )
+
+    build_site_data(workspace)
+    output_root = workspace / "dist" / "src" / "data"
+    fragments_root = output_root / "characters" / "fragment-bot" / "fragments"
+
+    description_path = fragments_root / "spec_v2" / "description.md"
+    assert description_path.exists()
+    assert description_path.read_text(encoding="utf-8") == "Line one.\nLine two.\n"
+
+    short_desc_path = fragments_root / "site" / "shortDescription.md"
+    assert short_desc_path.exists()
+    assert short_desc_path.read_text(encoding="utf-8") == "Canonical short description.\n"
+
+    variant_desc_path = fragments_root / "variants" / "compact" / "spec_v2" / "description.md"
+    assert variant_desc_path.exists()
+    assert variant_desc_path.read_text(encoding="utf-8") == "Compact description.\n"
+
+    manifest = load_json(output_root / "characters" / "fragment-bot" / "manifest.json")
+    fragments_meta = manifest["x"]["fragments"]
+    assert fragments_meta["spec_v2"]["description"] == "fragments/spec_v2/description.md"
+    assert fragments_meta["site"]["shortDescription"] == "fragments/site/shortDescription.md"
+    assert fragments_meta["fieldMap"]["first_message"] == "data.first_mes"
+    assert fragments_meta["variants"]["compact"]["spec_v2"]["description"] == (
+        "fragments/variants/compact/spec_v2/description.md"
+    )

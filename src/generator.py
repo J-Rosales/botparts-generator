@@ -18,6 +18,22 @@ SITE_ONLY_FIELDS = {
     "aiTokens": None,
     "uploadDate": "",
 }
+SPEC_V2_FRAGMENT_FILES = {
+    "description": "description.md",
+    "system_prompt": "system_prompt.md",
+    "first_message": "first_message.md",
+    "scenario": "scenario.md",
+    "post_history_instructions": "post_history_instructions.md",
+    "personality": "personality.md",
+    "mes_example": "mes_example.md",
+    "creator_notes": "creator_notes.md",
+}
+SITE_FRAGMENT_FILES = {
+    "shortDescription": "shortDescription.md",
+}
+FRAGMENT_FIELD_MAP = {
+    "first_message": "data.first_mes",
+}
 
 
 @dataclass
@@ -27,6 +43,8 @@ class BuildSummary:
     total_count: int
     created_dirs: list[str]
     warnings: list[str]
+    fragment_files_copied: int
+    variant_names: list[str]
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -44,6 +62,10 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
 def _ensure_dir(path: Path, created_dirs: set[Path]) -> None:
     path.mkdir(parents=True, exist_ok=True)
     created_dirs.add(path)
+
+
+def _read_text_normalized(path: Path) -> str:
+    return path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
 
 
 def _normalize_tag_value(value: Any) -> str | None:
@@ -126,7 +148,7 @@ def _coerce_ai_tokens(value: Any, warnings: list[str], slug: str) -> int | None:
     return None
 
 
-def _build_fragment_files(
+def _build_base_fragments(
     content: dict[str, Any],
     fragments_dir: Path,
     created_dirs: set[Path],
@@ -191,24 +213,107 @@ def _build_fragment_files(
     return fragments
 
 
-def _build_variant_fragments(
-    variants_root: Path | None,
+def _copy_fragment_group(
+    source_dir: Path,
+    target_dir: Path,
+    mapping: dict[str, str],
+    relative_prefix: Path,
+    created_dirs: set[Path],
+) -> tuple[dict[str, str], int]:
+    inventory: dict[str, str] = {}
+    copied = 0
+    for key, filename in mapping.items():
+        source_path = source_dir / filename
+        if not source_path.exists():
+            continue
+        _ensure_dir(target_dir, created_dirs)
+        (target_dir / filename).write_text(_read_text_normalized(source_path), encoding="utf-8")
+        inventory[key] = str((relative_prefix / filename).as_posix())
+        copied += 1
+    return inventory, copied
+
+
+def _select_short_description_source(source_dir: Path, canonical_dir: Path) -> Path | None:
+    override_path = source_dir / "fragments" / "site" / SITE_FRAGMENT_FILES["shortDescription"]
+    if override_path.exists():
+        return override_path
+    canonical_path = canonical_dir / SITE_FRAGMENT_FILES["shortDescription"]
+    if canonical_path.exists() and canonical_path.read_text(encoding="utf-8").strip():
+        return canonical_path
+    return None
+
+
+def _build_authored_fragments(
+    source_dir: Path | None,
     fragments_dir: Path,
     created_dirs: set[Path],
-) -> dict[str, str]:
-    variants: dict[str, str] = {}
-    if variants_root is None or not variants_root.exists():
-        return variants
-    for style_dir in sorted(path for path in variants_root.iterdir() if path.is_dir()):
-        spec_path = style_dir / "spec_v2_fields.md"
-        if not spec_path.exists():
-            continue
-        relative_target = Path("fragments") / "variants" / style_dir.name / "spec_v2_fields.md"
-        target_path = fragments_dir / "variants" / style_dir.name
-        _ensure_dir(target_path, created_dirs)
-        (target_path / "spec_v2_fields.md").write_text(spec_path.read_text(encoding="utf-8"), encoding="utf-8")
-        variants[style_dir.name] = str(relative_target.as_posix())
-    return variants
+) -> tuple[dict[str, Any], int, set[str]]:
+    fragments_meta: dict[str, Any] = {}
+    if source_dir is None:
+        return fragments_meta, 0, set()
+
+    source_fragments_root = source_dir / "fragments"
+    spec_v2_inventory, spec_count = _copy_fragment_group(
+        source_fragments_root / "spec_v2",
+        fragments_dir / "spec_v2",
+        SPEC_V2_FRAGMENT_FILES,
+        Path("fragments") / "spec_v2",
+        created_dirs,
+    )
+    fragment_count = spec_count
+    if spec_v2_inventory:
+        fragments_meta["spec_v2"] = spec_v2_inventory
+
+    canonical_dir = source_dir / "canonical"
+    short_source = _select_short_description_source(source_dir, canonical_dir)
+    site_inventory: dict[str, str] = {}
+    if short_source is not None:
+        target_dir = fragments_dir / "site"
+        _ensure_dir(target_dir, created_dirs)
+        target_path = target_dir / SITE_FRAGMENT_FILES["shortDescription"]
+        target_path.write_text(_read_text_normalized(short_source), encoding="utf-8")
+        site_inventory["shortDescription"] = str(
+            (Path("fragments") / "site" / SITE_FRAGMENT_FILES["shortDescription"]).as_posix()
+        )
+        fragment_count += 1
+    if site_inventory:
+        fragments_meta["site"] = site_inventory
+
+    variants_root = source_dir / "variants"
+    variants_inventory: dict[str, Any] = {}
+    variant_names: set[str] = set()
+    if variants_root.exists():
+        for variant_dir in sorted(path for path in variants_root.iterdir() if path.is_dir()):
+            variant_spec, variant_spec_count = _copy_fragment_group(
+                variant_dir / "spec_v2",
+                fragments_dir / "variants" / variant_dir.name / "spec_v2",
+                SPEC_V2_FRAGMENT_FILES,
+                Path("fragments") / "variants" / variant_dir.name / "spec_v2",
+                created_dirs,
+            )
+            variant_site, variant_site_count = _copy_fragment_group(
+                variant_dir / "site",
+                fragments_dir / "variants" / variant_dir.name / "site",
+                SITE_FRAGMENT_FILES,
+                Path("fragments") / "variants" / variant_dir.name / "site",
+                created_dirs,
+            )
+            if not variant_spec and not variant_site:
+                continue
+            variant_entry: dict[str, Any] = {}
+            if variant_spec:
+                variant_entry["spec_v2"] = variant_spec
+            if variant_site:
+                variant_entry["site"] = variant_site
+            variants_inventory[variant_dir.name] = variant_entry
+            variant_names.add(variant_dir.name)
+            fragment_count += variant_spec_count + variant_site_count
+
+    if variants_inventory:
+        fragments_meta["variants"] = variants_inventory
+
+    fragments_meta["fieldMap"] = FRAGMENT_FIELD_MAP
+    return fragments_meta, fragment_count, variant_names
 
 
 def _merge_manifest_data(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -432,6 +537,8 @@ def build_site_data(
     all_manifests = character_sources + placeholder_manifests
 
     entries: list[dict[str, Any]] = []
+    fragment_files_copied = 0
+    variant_names: set[str] = set()
     for source_manifest in all_manifests:
         slug = source_manifest.get("slug") or "unknown"
         site_entry = site_entries_by_slug.get(slug, {})
@@ -484,21 +591,22 @@ def build_site_data(
         character_dir = output_root / "characters" / slug
         _ensure_dir(character_dir, created_dirs)
         fragments_dir = character_dir / "fragments"
-        fragments = _build_fragment_files(content, fragments_dir, created_dirs)
         source_dir = source_manifest.get("_source_dir")
-        variants_root = Path(source_dir) / "variants" if source_dir else None
-        variants = _build_variant_fragments(
-            variants_root,
+        base_fragments = _build_base_fragments(content, fragments_dir, created_dirs)
+        fragments_meta, fragments_copied, variant_set = _build_authored_fragments(
+            Path(source_dir) if source_dir else None,
             fragments_dir,
             created_dirs,
         )
+        fragment_files_copied += fragments_copied
+        variant_names.update(variant_set)
 
         manifest_x = dict(source_manifest.get("x") or {})
         manifest_x.update(site_fields)
-        if variants:
-            manifest_x["variants"] = variants
+        if fragments_meta:
+            manifest_x["fragments"] = fragments_meta
 
-        base = {"fragments": fragments}
+        base = {"fragments": base_fragments}
         modules = _map_modules(source_manifest)
         transforms = _map_transforms(source_manifest)
 
@@ -566,6 +674,8 @@ def build_site_data(
                 total_count=len(entries),
                 created_dirs=sorted(str(path.relative_to(dist_root)) for path in created_dirs),
                 warnings=warnings,
+                fragment_files_copied=fragment_files_copied,
+                variant_names=sorted(variant_names),
             ),
             include_timestamps=include_timestamps,
         ),
@@ -578,6 +688,8 @@ def build_site_data(
         total_count=len(entries),
         created_dirs=sorted(str(path.relative_to(dist_root)) for path in created_dirs),
         warnings=warnings,
+        fragment_files_copied=fragment_files_copied,
+        variant_names=sorted(variant_names),
     )
 
 
@@ -617,6 +729,18 @@ def _render_report(summary: BuildSummary, include_timestamps: bool) -> str:
             f"  - aiTokens (default: {SITE_ONLY_FIELDS['aiTokens']})",
             f"  - uploadDate (default: '{SITE_ONLY_FIELDS['uploadDate']}')",
             "  - placeholder (default: false for real characters)",
+            f"- Fragments emitted: {'yes' if summary.fragment_files_copied > 0 else 'no'}",
+            f"- Fragment files copied: {summary.fragment_files_copied}",
+            "- Variants discovered:",
+        ]
+    )
+    if summary.variant_names:
+        lines.extend([f"  - {variant}" for variant in summary.variant_names])
+    else:
+        lines.append("  - (none)")
+
+    lines.extend(
+        [
             "- Tag partitioning: tags starting with 'spoiler:' move to spoilerTags; prefix stripped, trimmed, deduped.",
             "- uploadDate formatting: YYYY-MM-DD (date-only); empty string when unknown.",
             "- aiTokens type: number|null.",

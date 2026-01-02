@@ -24,6 +24,10 @@ def test_author_scaffold_creation(tmp_path: Path) -> None:
     assert (character_dir / "canonical" / "shortDescription.md").exists()
     fragments_dir = character_dir / "fragments"
     assert (fragments_dir / ".keep").exists()
+    assert (fragments_dir / "spec_v2").exists()
+    assert (fragments_dir / "spec_v2" / ".keep").exists()
+    assert (fragments_dir / "site").exists()
+    assert (fragments_dir / "site" / ".keep").exists()
     assert (character_dir / "runs").exists()
 
 
@@ -61,6 +65,39 @@ def test_ensure_preliminary_draft_appends(tmp_path: Path) -> None:
     draft_path = authoring.ensure_preliminary_draft(character_dir, "Second draft\n", run_id="run-2")
     expected = "First draft\n\n---\nElaboration appended run-2\n---\n\nSecond draft\n"
     assert draft_path.read_text(encoding="utf-8") == expected
+
+
+def test_write_extracted_fragments_from_headings(tmp_path: Path) -> None:
+    sources_root = tmp_path / "sources"
+    character_dir = authoring.scaffold_character(sources_root, "alpha-bot", "Alpha Bot")
+    output_text = "\n".join(
+        [
+            "## description",
+            "A short description.",
+            "## system_prompt",
+            "Stay in character.",
+            "## first_message",
+            "Hello there!",
+            "## post_history_instructions",
+            "Keep responses concise.",
+            "## short description",
+            "A site short description.",
+        ]
+    )
+    warnings = authoring.write_extracted_fragments(character_dir, output_text)
+    assert warnings == []
+    fragments_root = character_dir / "fragments"
+    assert (fragments_root / "spec_v2" / "description.md").read_text(encoding="utf-8") == "A short description.\n"
+    assert (fragments_root / "spec_v2" / "system_prompt.md").read_text(encoding="utf-8") == "Stay in character.\n"
+    assert (fragments_root / "spec_v2" / "first_message.md").read_text(encoding="utf-8") == "Hello there!\n"
+    assert (
+        (fragments_root / "spec_v2" / "post_history_instructions.md").read_text(encoding="utf-8")
+        == "Keep responses concise.\n"
+    )
+    assert (
+        (fragments_root / "site" / "shortDescription.md").read_text(encoding="utf-8")
+        == "A site short description.\n"
+    )
 
 
 def test_list_and_delete_character_dirs(tmp_path: Path) -> None:
