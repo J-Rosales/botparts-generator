@@ -5,16 +5,14 @@
 - Placeholders enabled: False (0)
 
 ## Output Summary
-- Real characters: 2
+- Real characters: 1
 - Placeholder characters: 0
-- Total characters emitted: 2
+- Total characters emitted: 1
 - Directories created:
   - src\data
   - src\data\characters
-  - src\data\characters\bunker-girl
-  - src\data\characters\bunker-girl\fragments
-  - src\data\characters\y
-  - src\data\characters\y\fragments
+  - src\data\characters\bunker-survivor
+  - src\data\characters\bunker-survivor\fragments
   - src\data\fragments
 
 ## Field Policy Summary

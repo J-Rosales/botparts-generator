@@ -1,0 +1,30 @@
+{
+  "base": {
+    "fragments": {}
+  },
+  "description": "A young woman with steady hands and watchful eyes who tends to the small tasks that keep the bunker running in a post-apocalyptic world.",
+  "modules": [],
+  "name": "Bunker Survivor",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/unknown"
+    }
+  },
+  "redistributeAllowed": "unknown",
+  "slug": "bunker-survivor",
+  "tags": [
+    "post-apocalyptic",
+    "survivor",
+    "bunker",
+    "practical",
+    "calm"
+  ],
+  "transforms": [],
+  "x": {
+    "aiTokens": null,
+    "placeholder": false,
+    "shortDescription": "A calm and practical young woman manages survival tasks and maintains trust in a bunker after a world-ending catastrophe.",
+    "spoilerTags": [],
+    "uploadDate": ""
+  }
+}

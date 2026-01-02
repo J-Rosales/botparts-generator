@@ -1,2 +1,0 @@
-C:/Users/GKG_VivoBook15/Documents/GitHub/BotpartsProject/botparts-generator/prompts/extract_fields/01_specv2_fields_v1.md
-sha256:7b788ae1cafd5b09521061a29b1a2e3e4ba1523be5d0205760d9e1c74ddaa837

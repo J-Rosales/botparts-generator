@@ -1,43 +1,28 @@
 {
   "entries": [
     {
-      "dataPath": "data/characters/bunker-girl/manifest.json",
-      "description": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must survive as long as you can with her.",
+      "dataPath": "data/characters/bunker-survivor/manifest.json",
+      "description": "A young woman with steady hands and watchful eyes who tends to the small tasks that keep the bunker running in a post-apocalyptic world.",
       "featured": false,
-      "name": "Amanda",
+      "name": "Bunker Survivor",
       "provenance": {
         "original": {
           "url": "https://example.com/unknown"
         }
       },
       "redistributeAllowed": "unknown",
-      "slug": "bunker-girl",
-      "tags": [],
+      "slug": "bunker-survivor",
+      "tags": [
+        "post-apocalyptic",
+        "survivor",
+        "bunker",
+        "practical",
+        "calm"
+      ],
       "x": {
         "aiTokens": null,
         "placeholder": false,
-        "shortDescription": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must surviv",
-        "spoilerTags": [],
-        "uploadDate": ""
-      }
-    },
-    {
-      "dataPath": "data/characters/y/manifest.json",
-      "description": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must survive as long as you can with her.",
-      "featured": false,
-      "name": "y",
-      "provenance": {
-        "original": {
-          "url": "https://example.com/unknown"
-        }
-      },
-      "redistributeAllowed": "unknown",
-      "slug": "y",
-      "tags": [],
-      "x": {
-        "aiTokens": null,
-        "placeholder": false,
-        "shortDescription": "After the apocalypse ruins the world, you wake up in a bunker. A young woman rescued you while you were unconscious, and now you must surviv",
+        "shortDescription": "A calm and practical young woman manages survival tasks and maintains trust in a bunker after a world-ending catastrophe.",
         "spoilerTags": [],
         "uploadDate": ""
       }
