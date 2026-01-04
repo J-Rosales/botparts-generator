@@ -59,7 +59,10 @@ Use a quick checklist like:
 - **Items**: 1–3 objects with story weight (name + what it implies).
 - **Knowledge**: 1–3 facts the character uniquely knows (fact + source).
 - **Ideology**: 1–3 beliefs or principles (belief + origin/pressure).
-- **Relationships**: 1–3 ties (person + relationship status + a numeric “intensity” or “trust” score).
+- **Relationships**: 1–3 ties (person + relationship status).
+
+Optional for any embedded entry type: add a `scopeLevelIndex` that maps to scope layers
+(0=world, 1=character, 2=variant) when you want to capture the intended scope explicitly.
 
 Then turn each item into its own file:
 

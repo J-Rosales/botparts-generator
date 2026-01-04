@@ -9,7 +9,7 @@ Return JSON only with:
 - title (string)
 - slug (string, lowercase letters/digits/hyphens/underscores)
 - description (string)
-- score (number, optional)
+- scopeLevelIndex (integer, optional; 0=world, 1=character, 2=variant)
 
 Rules:
 - Keep the description concise and grounded.
