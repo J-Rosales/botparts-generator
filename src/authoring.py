@@ -14,6 +14,7 @@ from typing import Any, Iterable
 
 HEADING_PATTERN = re.compile(r"^(?P<level>#+)\s+(?P<title>.+?)\s*$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+EMBEDDED_ENTRY_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 CANONICAL_REQUIRED_FILES = ("spec_v2_fields.md", "shortDescription.md")
 
 
@@ -92,6 +93,14 @@ def validate_slug(slug: str) -> None:
         )
 
 
+def validate_embedded_entry_slug(slug: str) -> None:
+    if not slug or not EMBEDDED_ENTRY_SLUG_PATTERN.match(slug):
+        raise ValueError(
+            "Invalid entry slug. Use lowercase letters, digits, hyphens, or underscores "
+            "(example: observatory-bench)."
+        )
+
+
 def find_staging_draft_paths(sources_root: Path) -> list[Path]:
     drafts_file = sources_root / "staging_drafts.md"
     if drafts_file.exists():
@@ -133,6 +142,31 @@ def scaffold_character(
     for filename in CANONICAL_REQUIRED_FILES:
         (canonical_dir / filename).write_text("", encoding="utf-8")
     return character_dir
+
+
+def write_embedded_entry(
+    character_dir: Path,
+    entry_type: str,
+    entry_slug: str,
+    body: str,
+    frontmatter: dict[str, str | int | float] | None = None,
+) -> Path:
+    validate_embedded_entry_slug(entry_slug)
+    entries_dir = character_dir / "fragments" / "entries" / entry_type
+    entries_dir.mkdir(parents=True, exist_ok=True)
+    entry_path = entries_dir / f"{entry_slug}.md"
+    lines: list[str] = []
+    if frontmatter:
+        lines.append("---")
+        for key, value in frontmatter.items():
+            lines.append(f"{key}: {value}")
+        lines.append("---")
+        lines.append("")
+    if body.strip():
+        lines.append(body.strip())
+        lines.append("")
+    entry_path.write_text("\n".join(lines), encoding="utf-8")
+    return entry_path
 
 
 def write_staging_snapshot(character_dir: Path, section: HeadingSection) -> None:

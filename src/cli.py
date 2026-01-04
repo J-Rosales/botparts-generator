@@ -9,7 +9,7 @@ from typing import Iterable
 
 from src import authoring
 from src import llm_client
-from src.generator import build_site_data
+from src.generator import EMBEDDED_ENTRY_TYPES, build_site_data
 from src.secrets import load_secrets_file
 
 
@@ -193,6 +193,8 @@ def _run_author(args: argparse.Namespace) -> int:
     (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
     (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
 
+    _prompt_embedded_entries(character_dir)
+
     audit = authoring.audit_character(sources_root, slug, strict=False)
     _print_audit(audit)
     if not audit.ok:
@@ -367,6 +369,68 @@ def _prompt_text(label: str, default: str | None = None) -> str:
     suffix = f" [{default}]" if default else ""
     response = input(f"{label}{suffix}: ").strip()
     return response or (default or "")
+
+
+def _prompt_embedded_entries(character_dir: Path) -> None:
+    print("\nEmbedded entries (optional). Add canonical fragments for reuse in variants.")
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        count = _prompt_entry_count(f"How many {entry_type} entries to add", maximum=10)
+        for index in range(count):
+            title = _prompt_text(f"{entry_type} #{index + 1} title")
+            if not title:
+                print("Title is required. Skipping entry.", file=sys.stderr)
+                continue
+            default_slug = authoring.slugify(title)
+            entry_slug = _prompt_entry_slug(default_slug)
+            description = _prompt_text(f"{entry_type} #{index + 1} description")
+            score = _prompt_numeric_value_optional(f"{entry_type} #{index + 1} numeric score (optional)")
+            frontmatter = {"title": title}
+            if score is not None:
+                frontmatter["score"] = score
+            authoring.write_embedded_entry(
+                character_dir,
+                entry_type=entry_type,
+                entry_slug=entry_slug,
+                body=description,
+                frontmatter=frontmatter,
+            )
+
+
+def _prompt_entry_slug(default_slug: str) -> str:
+    while True:
+        response = _prompt_text("Entry slug", default=default_slug)
+        slug = response.strip()
+        try:
+            authoring.validate_embedded_entry_slug(slug)
+        except ValueError as exc:
+            print(f"{exc} Try again.", file=sys.stderr)
+            continue
+        return slug
+
+
+def _prompt_entry_count(label: str, maximum: int) -> int:
+    while True:
+        response = input(f"{label} (0-{maximum}, press Enter to skip): ").strip()
+        if not response:
+            return 0
+        if not response.isdigit():
+            print("Invalid input. Expected a number.", file=sys.stderr)
+            continue
+        count = int(response)
+        if 0 <= count <= maximum:
+            return count
+        print(f"Count out of range (0-{maximum}).", file=sys.stderr)
+
+
+def _prompt_numeric_value_optional(label: str) -> int | None:
+    response = input(f"{label}: ").strip()
+    if not response:
+        return None
+    try:
+        return int(response)
+    except ValueError:
+        print("Invalid number. Skipping numeric value.", file=sys.stderr)
+        return None
 
 
 def _prompt_numeric_choice(label: str, minimum: int, maximum: int) -> int | None:
