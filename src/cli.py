@@ -12,6 +12,8 @@ from src import llm_client
 from src.generator import EMBEDDED_ENTRY_TYPES, build_site_data
 from src.secrets import load_secrets_file
 
+EMBEDDED_ENTRY_MAX = 10
+
 
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Botparts authoring and build CLI.")
@@ -193,7 +195,7 @@ def _run_author(args: argparse.Namespace) -> int:
     (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
     (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
 
-    _prompt_embedded_entries(character_dir)
+    _prompt_embedded_entries(character_dir, prompts_root)
 
     audit = authoring.audit_character(sources_root, slug, strict=False)
     _print_audit(audit)
@@ -371,27 +373,143 @@ def _prompt_text(label: str, default: str | None = None) -> str:
     return response or (default or "")
 
 
-def _prompt_embedded_entries(character_dir: Path) -> None:
+def _prompt_embedded_entries(character_dir: Path, prompts_root: Path) -> None:
     print("\nEmbedded entries (optional). Add canonical fragments for reuse in variants.")
+    mode = _prompt_embedded_entries_mode()
+    if mode == "skip":
+        print("Skipping embedded entries.")
+        return
+    run_dir = character_dir / "runs" / authoring.build_run_id(character_dir.name)
+    if mode == "auto":
+        _prompt_embedded_entries_auto(character_dir, prompts_root, run_dir)
+        return
+    _prompt_embedded_entries_from_input(character_dir, prompts_root, run_dir)
+
+
+def _prompt_embedded_entries_mode() -> str:
+    print("Select embedded entry authoring mode:")
+    print("1. Automatically (generate entries with one LLM call).")
+    print("2. From Input Prompt (provide name: description lines).")
+    print("3. Skip embedded entries.")
+    while True:
+        response = input("Mode selection (1-3, press Enter to skip): ").strip()
+        if not response:
+            return "skip"
+        if not response.isdigit():
+            print("Invalid input. Expected a numeric selection.", file=sys.stderr)
+            continue
+        try:
+            return _resolve_embedded_entries_mode(int(response))
+        except ValueError as exc:
+            print(f"{exc} Try again.", file=sys.stderr)
+
+
+def _resolve_embedded_entries_mode(choice: int) -> str:
+    mapping = {1: "auto", 2: "from_input", 3: "skip"}
+    if choice not in mapping:
+        raise ValueError("Invalid embedded entry mode selection.")
+    return mapping[choice]
+
+
+def _prompt_embedded_entries_auto(
+    character_dir: Path,
+    prompts_root: Path,
+    run_dir: Path,
+) -> None:
+    prompt_path = _select_prompt(prompts_root, "embedded_entries_auto")
+    input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
+    compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
+    llm_result = _invoke_llm(compiled_prompt)
+    authoring.write_embedded_entries_log(
+        run_dir / "embedded_entries_auto.md",
+        prompt_compiled=compiled_prompt,
+        output_text=llm_result.output_text,
+        model_info=llm_result.model_info,
+        input_payload=input_payload,
+    )
+    try:
+        entries_by_type = authoring.parse_embedded_entries_auto_response(
+            llm_result.output_text,
+            EMBEDDED_ENTRY_TYPES,
+            EMBEDDED_ENTRY_MAX,
+        )
+    except ValueError as exc:
+        print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
+        return
     for entry_type in EMBEDDED_ENTRY_TYPES:
-        count = _prompt_entry_count(f"How many {entry_type} entries to add", maximum=10)
-        for index in range(count):
-            title = _prompt_text(f"{entry_type} #{index + 1} title")
-            if not title:
-                print("Title is required. Skipping entry.", file=sys.stderr)
-                continue
-            default_slug = authoring.slugify(title)
-            entry_slug = _prompt_entry_slug(default_slug)
-            description = _prompt_text(f"{entry_type} #{index + 1} description")
-            score = _prompt_numeric_value_optional(f"{entry_type} #{index + 1} numeric score (optional)")
-            frontmatter = {"title": title}
-            if score is not None:
-                frontmatter["score"] = score
+        for entry in entries_by_type.get(entry_type, []):
+            frontmatter = {"title": entry.title}
+            if entry.score is not None:
+                frontmatter["score"] = entry.score
             authoring.write_embedded_entry(
                 character_dir,
                 entry_type=entry_type,
-                entry_slug=entry_slug,
-                body=description,
+                entry_slug=entry.slug,
+                body=entry.description,
+                frontmatter=frontmatter,
+            )
+
+
+def _prompt_embedded_entries_from_input(
+    character_dir: Path,
+    prompts_root: Path,
+    run_dir: Path,
+) -> None:
+    prompt_path = _select_prompt(prompts_root, "embedded_entries_from_input")
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        print(f"\nEnter {entry_type} entries (name: description).")
+        print("Type CONTINUE to skip an entry prompt, NEXT to move to the next entry type.")
+        entries: list[authoring.EmbeddedEntry] = []
+        seen_slugs: set[str] = set()
+        attempt_index = 0
+        while len(entries) < EMBEDDED_ENTRY_MAX:
+            raw_line = input(f"{entry_type} input: ").strip()
+            try:
+                kind, name, description = _parse_embedded_entries_input(raw_line)
+            except ValueError as exc:
+                print(f"{exc} Try again.", file=sys.stderr)
+                continue
+            if kind == "NEXT":
+                break
+            if kind == "CONTINUE":
+                continue
+            input_payload = _format_embedded_entries_input_payload(entry_type, name, description)
+            compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY INPUT")
+            llm_result = _invoke_llm(compiled_prompt)
+            attempt_index += 1
+            try:
+                entry = authoring.parse_embedded_entry_response(llm_result.output_text)
+            except ValueError as exc:
+                print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
+                continue
+            log_path = (
+                run_dir
+                / "embedded_entries_from_input"
+                / entry_type
+                / f"entry_{attempt_index:02d}_{entry.slug}.md"
+            )
+            authoring.write_embedded_entries_log(
+                log_path,
+                prompt_compiled=compiled_prompt,
+                output_text=llm_result.output_text,
+                model_info=llm_result.model_info,
+                input_payload=input_payload,
+            )
+            if entry.slug in seen_slugs:
+                print(f"Duplicate slug '{entry.slug}' for {entry_type}; skipping entry.")
+                continue
+            seen_slugs.add(entry.slug)
+            entries.append(entry)
+        entries_sorted = sorted(entries, key=lambda entry: entry.slug)
+        for entry in entries_sorted:
+            frontmatter = {"title": entry.title}
+            if entry.score is not None:
+                frontmatter["score"] = entry.score
+            authoring.write_embedded_entry(
+                character_dir,
+                entry_type=entry_type,
+                entry_slug=entry.slug,
+                body=entry.description,
                 frontmatter=frontmatter,
             )
 
@@ -466,6 +584,30 @@ def _print_audit(audit: authoring.AuditResult) -> None:
         print(f"WARNING: {warning}")
     for error in audit.errors:
         print(f"ERROR: {error}")
+
+
+def _parse_embedded_entries_input(line: str) -> tuple[str, str | None, str | None]:
+    cleaned = line.strip()
+    if not cleaned:
+        raise ValueError("Input cannot be blank. Use NAME: description, CONTINUE, or NEXT.")
+    upper = cleaned.upper()
+    if upper in {"CONTINUE", "NEXT"}:
+        return upper, None, None
+    if ":" not in cleaned:
+        raise ValueError("Expected format 'name: description'.")
+    name, description = (part.strip() for part in cleaned.split(":", 1))
+    if not name or not description:
+        raise ValueError("Both name and description are required.")
+    return "ENTRY", name, description
+
+
+def _format_embedded_entries_auto_payload(entry_types: Iterable[str], maximum: int) -> str:
+    lines = [f"- {entry_type} (max {maximum})" for entry_type in entry_types]
+    return "Entry types:\n" + "\n".join(lines)
+
+
+def _format_embedded_entries_input_payload(entry_type: str, name: str, description: str) -> str:
+    return f"Entry type: {entry_type}\nName: {name}\nDescription: {description}"
 
 
 if __name__ == "__main__":
