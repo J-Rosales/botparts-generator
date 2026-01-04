@@ -14,6 +14,7 @@ from typing import Any, Iterable
 
 HEADING_PATTERN = re.compile(r"^(?P<level>#+)\s+(?P<title>.+?)\s*$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+CANONICAL_REQUIRED_FILES = ("spec_v2_fields.md", "shortDescription.md")
 
 
 @dataclass(frozen=True)
@@ -128,8 +129,9 @@ def scaffold_character(
 
     (character_dir / "staging_snapshot.md").write_text("", encoding="utf-8")
     (character_dir / "preliminary_draft.md").write_text("", encoding="utf-8")
-    (character_dir / "canonical" / "spec_v2_fields.md").write_text("", encoding="utf-8")
-    (character_dir / "canonical" / "shortDescription.md").write_text("", encoding="utf-8")
+    canonical_dir = character_dir / "canonical"
+    for filename in CANONICAL_REQUIRED_FILES:
+        (canonical_dir / filename).write_text("", encoding="utf-8")
     return character_dir
 
 
@@ -321,6 +323,13 @@ def load_short_description(path: Path) -> str:
     return path.read_text(encoding="utf-8").strip()
 
 
+def canonical_required_paths(canonical_dir: Path) -> list[tuple[Path, str]]:
+    return [
+        (canonical_dir / filename, f"canonical/{filename}")
+        for filename in CANONICAL_REQUIRED_FILES
+    ]
+
+
 def audit_character(sources_root: Path, slug: str, strict: bool = False) -> AuditResult:
     errors: list[str] = []
     warnings: list[str] = []
@@ -338,11 +347,7 @@ def audit_character(sources_root: Path, slug: str, strict: bool = False) -> Audi
     status = str(meta.get("status", "draft"))
 
     canonical_dir = character_dir / "canonical"
-    required_files = [
-        (canonical_dir / "spec_v2_fields.md", "canonical/spec_v2_fields.md"),
-        (canonical_dir / "shortDescription.md", "canonical/shortDescription.md"),
-    ]
-    for path, label in required_files:
+    for path, label in canonical_required_paths(canonical_dir):
         if not path.exists() or not path.read_text(encoding="utf-8").strip():
             message = f"Missing or empty {label} for {slug}."
             if status == "locked":
