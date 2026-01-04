@@ -23,6 +23,9 @@ EMBEDDED_ENTRY_TYPES = ("locations", "items", "knowledge", "ideology", "relation
 EMBEDDED_ENTRY_LIMIT = 50
 EMBEDDED_ENTRY_FILENAME = re.compile(r"^[a-z0-9][a-z0-9_-]*\.md$")
 EMBEDDED_ENTRY_PLACEHOLDERS = {".keep", ".gitkeep"}
+SCOPE_LAYERS = {"world", "character", "variant"}
+SCOPE_SIDECAR_SUFFIX = ".scope.json"
+WORLD_PROMOTION_FILES = ("PROMOTE.md", "meta.yaml")
 
 
 @dataclass
@@ -58,6 +61,166 @@ def _normalize_tag_value(value: Any) -> str | None:
     if not text:
         return None
     return text
+
+
+def _normalize_scope(value: Any, warnings: list[str], context: str) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    if text not in SCOPE_LAYERS:
+        warnings.append(f"[{context}] Unrecognized scope '{value}'; expected {sorted(SCOPE_LAYERS)}.")
+        return None
+    return text
+
+
+def _parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}, text
+    end_index = None
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            end_index = idx
+            break
+    if end_index is None:
+        return {}, text
+    frontmatter_lines = lines[1:end_index]
+    body_lines = lines[end_index + 1 :]
+    metadata: dict[str, str] = {}
+    for raw in frontmatter_lines:
+        if ":" not in raw:
+            continue
+        key, value = raw.split(":", 1)
+        metadata[key.strip()] = value.strip()
+    body = "\n".join(body_lines)
+    if text.endswith("\n"):
+        body += "\n"
+    return metadata, body
+
+
+def _load_scope_sidecar(path: Path, warnings: list[str], context: str) -> str | None:
+    sidecar_path = path.with_name(path.name + SCOPE_SIDECAR_SUFFIX)
+    if not sidecar_path.exists():
+        return None
+    try:
+        payload = _load_json(sidecar_path)
+    except json.JSONDecodeError:
+        warnings.append(f"[{context}] Invalid JSON in scope sidecar {sidecar_path.name}.")
+        return None
+    if not isinstance(payload, dict):
+        warnings.append(f"[{context}] Scope sidecar {sidecar_path.name} must be an object.")
+        return None
+    return _normalize_scope(payload.get("scope"), warnings, context)
+
+
+def _read_scoped_fragment(
+    path: Path,
+    warnings: list[str],
+    context: str,
+    default_scope: str,
+) -> tuple[str, str]:
+    raw_text = path.read_text(encoding="utf-8")
+    frontmatter, body = _parse_frontmatter(raw_text)
+    frontmatter_scope = _normalize_scope(frontmatter.get("scope"), warnings, context)
+    sidecar_scope = _load_scope_sidecar(path, warnings, context)
+    if sidecar_scope and frontmatter_scope and sidecar_scope != frontmatter_scope:
+        warnings.append(
+            f"[{context}] Scope sidecar overrides frontmatter ({frontmatter_scope} -> {sidecar_scope})."
+        )
+    scope = sidecar_scope or frontmatter_scope or default_scope
+    return scope, body
+
+
+def _world_pack_promoted(pack_dir: Path, warnings: list[str], context: str) -> bool:
+    if (pack_dir / "PROMOTE.md").exists():
+        return True
+    meta_path = pack_dir / "meta.yaml"
+    if meta_path.exists():
+        meta = authoring.parse_meta_yaml(meta_path)
+        value = meta.get("promoteWorld")
+        if value is None:
+            value = meta.get("promote")
+        if isinstance(value, bool):
+            return value
+        if value is not None:
+            warnings.append(f"[{context}] meta.yaml promoteWorld must be true/false.")
+    return False
+
+
+def _build_world_fragments(
+    sources_root: Path,
+    output_root: Path,
+    created_dirs: set[Path],
+    warnings: list[str],
+    strict_scopes: bool,
+) -> dict[str, dict[str, list[str]]]:
+    world_root = sources_root / "world"
+    if not world_root.exists():
+        if strict_scopes:
+            raise RuntimeError("Strict scope mode enabled: sources/world is missing.")
+        return {}
+    if not world_root.is_dir():
+        message = "sources/world exists but is not a directory."
+        if strict_scopes:
+            raise RuntimeError(message)
+        warnings.append(message)
+        return {}
+
+    world_output_root = output_root / "fragments" / "world"
+    _ensure_dir(world_output_root, created_dirs)
+    (world_output_root / ".keep").write_text("", encoding="utf-8")
+
+    world_fragments: dict[str, dict[str, list[str]]] = {}
+    for pack_dir in sorted(world_root.iterdir(), key=lambda path: path.name):
+        if not pack_dir.is_dir():
+            continue
+        pack_name = pack_dir.name
+        pack_context = f"world/{pack_name}"
+        promoted = _world_pack_promoted(pack_dir, warnings, pack_context)
+        fragments_dir = pack_dir / "fragments"
+        if not fragments_dir.exists():
+            warnings.append(f"[{pack_context}] Missing fragments/ directory; skipping pack.")
+            continue
+        if not fragments_dir.is_dir():
+            warnings.append(f"[{pack_context}] fragments/ is not a directory; skipping pack.")
+            continue
+
+        pack_output_root = world_output_root / pack_name
+        pack_scopes: dict[str, list[str]] = {scope: [] for scope in SCOPE_LAYERS}
+        wrote_any = False
+
+        for fragment_path in sorted(fragments_dir.iterdir(), key=lambda path: path.name):
+            if fragment_path.is_dir():
+                warnings.append(f"[{pack_context}] Nested directory {fragment_path.name} ignored.")
+                continue
+            if fragment_path.name.endswith(SCOPE_SIDECAR_SUFFIX):
+                continue
+            scope, body = _read_scoped_fragment(fragment_path, warnings, pack_context, default_scope="world")
+            if scope == "world" and not promoted:
+                message = f"[{pack_context}] World-scoped fragment '{fragment_path.name}' blocked by promotion gate."
+                if strict_scopes:
+                    raise RuntimeError(message)
+                warnings.append(message)
+                continue
+            scope_dir = pack_output_root / scope
+            _ensure_dir(scope_dir, created_dirs)
+            target_path = scope_dir / fragment_path.name
+            target_path.write_text(body, encoding="utf-8")
+            relative = Path("fragments") / "world" / pack_name / scope / fragment_path.name
+            pack_scopes[scope].append(relative.as_posix())
+            wrote_any = True
+
+        if pack_output_root.exists() and not wrote_any:
+            _ensure_dir(pack_output_root, created_dirs)
+            (pack_output_root / ".keep").write_text("", encoding="utf-8")
+        if any(pack_scopes.values()):
+            world_fragments[pack_name] = {
+                scope: sorted(paths) for scope, paths in pack_scopes.items() if paths
+            }
+
+    return world_fragments
 
 
 def _partition_tags(
@@ -108,6 +271,29 @@ def _extract_site_field(source: dict[str, Any], key: str) -> Any:
     if isinstance(extension, dict) and key in extension:
         return extension.get(key)
     return None
+
+
+def _extract_world_packs(source_manifest: dict[str, Any], warnings: list[str], slug: str) -> list[str]:
+    extension = source_manifest.get("x")
+    if not isinstance(extension, dict):
+        return []
+    raw = extension.get("worldPacks", [])
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        warnings.append(f"[{slug}] x.worldPacks must be a list of pack names.")
+        return []
+    packs: list[str] = []
+    seen: set[str] = set()
+    for value in raw:
+        name = str(value).strip()
+        if not name:
+            continue
+        if name in seen:
+            continue
+        packs.append(name)
+        seen.add(name)
+    return sorted(packs)
 
 
 def _coerce_ai_tokens(value: Any, warnings: list[str], slug: str) -> int | None:
@@ -453,6 +639,7 @@ def build_site_data(
     workspace_root: Path,
     placeholders: int = 0,
     include_timestamps: bool = False,
+    strict_scopes: bool = False,
 ) -> BuildSummary:
     # This build is intentionally deterministic: identical inputs under sources/
     # must emit byte-identical dist/src/data outputs. Avoid non-deterministic
@@ -471,6 +658,14 @@ def build_site_data(
     _ensure_dir(output_root / "characters", created_dirs)
     _ensure_dir(output_root / "fragments", created_dirs)
     (output_root / "fragments" / ".keep").write_text("", encoding="utf-8")
+
+    world_fragments = _build_world_fragments(
+        sources_root,
+        output_root,
+        created_dirs,
+        warnings,
+        strict_scopes=strict_scopes,
+    )
 
     site_seed_path = sources_root / "site-seed" / "index.json"
     site_seed: dict[str, Any] = {}
@@ -586,6 +781,12 @@ def build_site_data(
             warnings,
             slug,
         )
+        world_packs = _extract_world_packs(source_manifest, warnings, slug)
+        world_scope_fragments: list[str] = []
+        for pack_name in world_packs:
+            pack_fragments = world_fragments.get(pack_name, {})
+            for scope_paths in pack_fragments.values():
+                world_scope_fragments.extend(scope_paths)
 
         manifest_x = dict(source_manifest.get("x") or {})
         manifest_x.update(site_fields)
@@ -593,6 +794,23 @@ def build_site_data(
             manifest_x["variants"] = variants
         if embedded_entries:
             manifest_x["embeddedEntries"] = embedded_entries
+        if world_packs:
+            manifest_x["worldPacks"] = world_packs
+
+        scope_layers = {
+            "world": {
+                "packs": world_packs,
+                "fragments": sorted(set(world_scope_fragments)),
+            },
+            "character": {
+                "fragments": sorted(set(fragments.values())),
+                "embeddedEntries": embedded_entries,
+            },
+            "variant": {
+                "fragments": sorted(set(variants.values())),
+            },
+        }
+        manifest_x["scopeLayers"] = scope_layers
 
         base = {"fragments": fragments}
         modules = _map_modules(source_manifest)
@@ -753,6 +971,11 @@ def main() -> None:
         action="store_true",
         help="Include timestamps in the report and index.json.",
     )
+    parser.add_argument(
+        "--strict-scope",
+        action="store_true",
+        help="Treat missing world packs or promotion gate failures as errors.",
+    )
     args = parser.parse_args()
 
     placeholders_env = os.environ.get("BOTPARTS_PLACEHOLDERS")
@@ -760,7 +983,14 @@ def main() -> None:
     if placeholders is None:
         placeholders = _parse_placeholders(placeholders_env)
 
-    build_site_data(Path.cwd(), placeholders=placeholders, include_timestamps=args.include_timestamps)
+    strict_env = os.environ.get("BOTPARTS_SCOPE_STRICT", "0")
+    strict_scopes = args.strict_scope or strict_env == "1"
+    build_site_data(
+        Path.cwd(),
+        placeholders=placeholders,
+        include_timestamps=args.include_timestamps,
+        strict_scopes=strict_scopes,
+    )
 
 
 if __name__ == "__main__":

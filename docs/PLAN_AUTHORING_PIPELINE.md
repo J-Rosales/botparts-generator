@@ -213,6 +213,11 @@ prompt hashes, model/config, input hash, and output text under
 - Embedded entries are **optional**; only validate entry layouts if
   `fragments/entries/<type>/` exists, enforcing slug-like filenames
   (`[a-z0-9][a-z0-9_-]*.md`) and the per-type entry limit.
+- World packs are **optional**; when present, ensure `sources/world/<pack>/fragments/` exists
+  and that world-scoped fragments only emit when a promotion gate is satisfied
+  (`PROMOTE.md` or `meta.yaml` with `promoteWorld: true`).
+- Scope labels are validated for fragment files via YAML frontmatter (`scope: ...`)
+  or a JSON sidecar (`<filename>.scope.json`).
 - If a variant is present, enforce:
   - `spec_v2_fields.md` exists and contains only delta fields.
   - `seed_phrase.txt` and `notes.md` are optional but recommended.

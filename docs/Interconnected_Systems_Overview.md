@@ -34,3 +34,9 @@ The scope layer system exists to prevent implausible or narratively absurd outco
 In practice, each generated consequence is implicitly or explicitly classified by scope (world, character, or variant) and impact (local, regional, global). World-level changes require explicit author intent or manual promotion; they are never introduced automatically as side effects. This keeps multiple variants of the same character—and multiple characters in the same setting—compatible with one another.
 
 This system interacts with all others by acting as a governor. It allows the static creation pipeline to remain stable, the variant pipeline to explore meaningful divergence, and embedded entries to add depth, all while preserving a coherent shared setting. The result is flexibility without drift, and creativity without loss of plausibility.
+
+**Scope labels + world packs (authoring contract):**
+- Fragment files can declare `scope: world|character|variant` via YAML frontmatter or a JSON sidecar (`<filename>.scope.json`).
+- Shared world canon inputs live under `sources/world/<pack>/fragments/`.
+- World-scoped fragments are emitted to `dist/src/data/fragments/world/<pack>/world/` only when a promotion gate is satisfied.
+- Character- and variant-scoped fragments from world packs are emitted under their respective scope subfolders, keeping output namespaces explicit.
