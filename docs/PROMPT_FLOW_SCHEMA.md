@@ -375,11 +375,12 @@ The schema is written as JSON Schema (Draft 2020-12) so it can be validated offl
         "path": {
           "type": "string"
         },
-        "score": {
+        "scopeLevelIndex": {
           "type": [
-            "number",
+            "integer",
             "null"
-          ]
+          ],
+          "description": "0=world, 1=character, 2=variant"
         }
       },
       "additionalProperties": false

@@ -619,8 +619,8 @@ def _prompt_embedded_entries_auto(
     for entry_type in EMBEDDED_ENTRY_TYPES:
         for entry in entries_by_type.get(entry_type, []):
             frontmatter = {"title": entry.title}
-            if entry.score is not None:
-                frontmatter["score"] = entry.score
+            if entry.scope_level_index is not None:
+                frontmatter["scopeLevelIndex"] = entry.scope_level_index
             authoring.write_embedded_entry(
                 character_dir,
                 entry_type=entry_type,
@@ -683,8 +683,8 @@ def _prompt_embedded_entries_from_input(
         entries_sorted = sorted(entries, key=lambda entry: entry.slug)
         for entry in entries_sorted:
             frontmatter = {"title": entry.title}
-            if entry.score is not None:
-                frontmatter["score"] = entry.score
+            if entry.scope_level_index is not None:
+                frontmatter["scopeLevelIndex"] = entry.scope_level_index
             authoring.write_embedded_entry(
                 character_dir,
                 entry_type=entry_type,

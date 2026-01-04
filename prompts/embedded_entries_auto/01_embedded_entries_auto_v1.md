@@ -5,7 +5,7 @@ Return JSON only. The JSON must be an object keyed by entry type. Each entry typ
 - title (string)
 - slug (string, lowercase letters/digits/hyphens/underscores)
 - description (string)
-- score (number, optional)
+- scopeLevelIndex (integer, optional; 0=world, 1=character, 2=variant)
 
 Rules:
 - Do not exceed the maximum count per entry type.

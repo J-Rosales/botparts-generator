@@ -15,6 +15,7 @@ from typing import Any, Iterable
 HEADING_PATTERN = re.compile(r"^(?P<level>#+)\s+(?P<title>.+?)\s*$")
 SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 EMBEDDED_ENTRY_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+SCOPE_LAYER_ORDER = ("world", "character", "variant")
 CANONICAL_REQUIRED_FILES = ("spec_v2_fields.md", "shortDescription.md")
 
 
@@ -40,7 +41,7 @@ class EmbeddedEntry:
     title: str
     slug: str
     description: str
-    score: int | float | None = None
+    scope_level_index: int | None = None
 
 
 @dataclass(frozen=True)
@@ -535,10 +536,20 @@ def _parse_embedded_entry_item(item: Any, entry_type: str | None) -> EmbeddedEnt
     slug = _require_text_field(item.get("slug"), "slug", entry_type)
     validate_embedded_entry_slug(slug)
     description = _require_text_field(item.get("description"), "description", entry_type)
-    score = item.get("score")
-    if score is not None and not (isinstance(score, (int, float)) and not isinstance(score, bool)):
-        raise ValueError("Embedded entry score must be a number.")
-    return EmbeddedEntry(title=title, slug=slug, description=description, score=score)
+    scope_level_index = item.get("scopeLevelIndex")
+    if scope_level_index is not None:
+        if not isinstance(scope_level_index, int) or isinstance(scope_level_index, bool):
+            raise ValueError("Embedded entry scopeLevelIndex must be an integer.")
+        if not 0 <= scope_level_index < len(SCOPE_LAYER_ORDER):
+            raise ValueError(
+                f"Embedded entry scopeLevelIndex must be between 0 and {len(SCOPE_LAYER_ORDER) - 1}."
+            )
+    return EmbeddedEntry(
+        title=title,
+        slug=slug,
+        description=description,
+        scope_level_index=scope_level_index,
+    )
 
 
 def _require_text_field(value: Any, field: str, entry_type: str | None) -> str:
