@@ -23,8 +23,30 @@ Notes or edits to apply after elaboration.
 ## Extraction prompt notes
 Optional notes to guide field extraction.
 
-## Embedded entries notes
+## Embedded entries
 Optional notes for embedded entry generation.
+
+Use `###` headings to declare the embedded entry type. Each `###` heading must
+start with one of the allowed type words to satisfy the schema:
+`Location`, `Item`, `Knowledge`, `Ideology`, or `Relationship`
+(mapped to `locations`, `items`, `knowledge`, `ideology`, `relationships`).
+
+Use `####` headings for each embedded entry title under the matching type, and
+write the description content beneath the `####` heading.
+
+Example:
+
+### Location: Infirmary
+#### Infirmary
+Location: Her workplace, has everything she needs.
+
+### Item: First-Aid Kit
+#### First-Aid Kit
+Item: Necessary for advanced stabilization operations.
+
+### Relationship: Dr. Klein
+#### Dr. Klein
+Relationship: Her mentor and direct superior in the hospital.
 
 ## Audit notes
 Optional notes or expected checks after audit.
