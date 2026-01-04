@@ -129,6 +129,8 @@ def _run_author(args: argparse.Namespace) -> int:
         return 1
     if mode == "variants":
         return _run_author_variants(args, sources_root, prompts_root)
+    if mode == "schema":
+        return _run_author_schema(args, sources_root, prompts_root)
 
     staging_path = _select_staging_file(sources_root, args.staging_file)
     if staging_path is None:
@@ -165,7 +167,7 @@ def _run_author(args: argparse.Namespace) -> int:
             prompt_paths.append(optional_prompt)
     staging_snapshot = (character_dir / "staging_snapshot.md").read_text(encoding="utf-8")
     compiled_elaboration = _compile_prompt(prompt_paths, staging_snapshot, "CONCEPT SNIPPET")
-    llm_result = _invoke_llm(compiled_elaboration)
+    llm_result = _invoke_llm(compiled_elaboration, label="Elaboration")
     elaboration = llm_result.output_text
     run_id = authoring.build_run_id(slug)
     run_dir = character_dir / "runs" / run_id
@@ -187,7 +189,7 @@ def _run_author(args: argparse.Namespace) -> int:
     input("Press enter once draft edits are saved...")
     draft_input = preliminary_path.read_text(encoding="utf-8")
     compiled_extraction = _compile_prompt([extract_prompt], draft_input, "DRAFT")
-    llm_result = _invoke_llm(compiled_extraction)
+    llm_result = _invoke_llm(compiled_extraction, label="Extraction")
     extracted = llm_result.output_text
     run_dir = character_dir / "runs" / authoring.build_run_id(slug)
     authoring.write_run_log(
@@ -271,7 +273,7 @@ def _run_author_variants(
 
         input_payload = _format_variant_prompt_payload(canonical_text, description)
         compiled_prompt = _compile_variant_prompt([prompt_path], canonical_text, description)
-        llm_result = _invoke_llm(compiled_prompt)
+        llm_result = _invoke_llm(compiled_prompt, label="Variant rewrite")
         spec_path.write_text(llm_result.output_text.rstrip() + "\n", encoding="utf-8")
         run_dir = variant_dir / "runs" / authoring.build_run_id(variant_slug)
         authoring.write_run_log(
@@ -299,6 +301,131 @@ def _run_author_variants(
         _print_variant_fragment_summary(delta_fields, variant_slug)
 
     print("Variant authoring complete. Run `bp build` to generate dist outputs.")
+    return 0
+
+
+def _run_author_schema(
+    args: argparse.Namespace,
+    sources_root: Path,
+    prompts_root: Path,
+) -> int:
+    schema_path = _prompt_schema_path()
+    if schema_path is None:
+        print("Aborted.", file=sys.stderr)
+        return 1
+    try:
+        draft = authoring.parse_minimal_staging_draft(schema_path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"Schema parsing failed: {exc}", file=sys.stderr)
+        return 1
+
+    slug = draft.slug.strip()
+    display_name = draft.display_name.strip()
+    try:
+        authoring.validate_slug(slug)
+    except ValueError as exc:
+        print(f"Invalid slug '{slug}': {exc}", file=sys.stderr)
+        return 1
+    characters_root = sources_root / "characters"
+    if (characters_root / slug).exists():
+        print(f"Slug '{slug}' already exists. Choose another.", file=sys.stderr)
+        return 1
+
+    embedded_entries: list[tuple[str, str, str]] = []
+    seen_entry_slugs: set[str] = set()
+    try:
+        for entry in draft.embedded_entries:
+            entry_slug = authoring.slugify(entry.title)
+            authoring.validate_embedded_entry_slug(entry_slug)
+            if entry_slug in seen_entry_slugs:
+                raise ValueError(f"Duplicate embedded entry slug: {entry_slug}")
+            seen_entry_slugs.add(entry_slug)
+            embedded_entries.append((entry.entry_type, entry_slug, entry.description))
+    except ValueError as exc:
+        print(f"Embedded entry validation failed: {exc}", file=sys.stderr)
+        return 1
+
+    character_dir: Path | None = None
+    try:
+        character_dir = authoring.scaffold_character(sources_root, slug, display_name)
+        authoring.write_staging_snapshot(
+            character_dir,
+            authoring.HeadingSection(title="Character concept", level=1, content=draft.concept + "\n"),
+        )
+
+        elaborate_prompt = _select_prompt(prompts_root, args.prompt_category)
+        tone_prompt = _select_prompt(prompts_root, args.tone_category, allow_skip=True)
+        voice_prompt = _select_prompt(prompts_root, args.voice_category, allow_skip=True)
+        style_prompt = _select_prompt(prompts_root, args.style_category, allow_skip=True)
+        extract_prompt = _select_prompt(prompts_root, args.extract_category)
+
+        prompt_paths = [elaborate_prompt]
+        for optional_prompt in (tone_prompt, voice_prompt, style_prompt):
+            if optional_prompt is not None:
+                prompt_paths.append(optional_prompt)
+
+        elaboration_input = _build_schema_elaboration_input(draft)
+        compiled_elaboration = _compile_prompt(prompt_paths, elaboration_input, "CONCEPT SNIPPET")
+        llm_result = _invoke_llm(compiled_elaboration, label="Elaboration")
+        elaboration = llm_result.output_text
+        run_id = authoring.build_run_id(slug)
+        run_dir = character_dir / "runs" / run_id
+        authoring.write_run_log(
+            run_dir,
+            prompt_paths,
+            compiled_elaboration,
+            model_info=llm_result.model_info,
+            input_payload=elaboration_input,
+            output_text=elaboration,
+        )
+        draft_text = _apply_schema_draft_edits(elaboration, draft.draft_edits)
+        (character_dir / "preliminary_draft.md").write_text(draft_text, encoding="utf-8")
+
+        extraction_input = _build_schema_extraction_input(draft_text, draft.extraction_notes)
+        compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
+        llm_result = _invoke_llm(compiled_extraction, label="Extraction")
+        extracted = llm_result.output_text
+        run_dir = character_dir / "runs" / authoring.build_run_id(slug)
+        authoring.write_run_log(
+            run_dir,
+            [extract_prompt],
+            compiled_extraction,
+            model_info=llm_result.model_info,
+            input_payload=extraction_input,
+            output_text=extracted,
+        )
+        spec_text, short_desc = authoring.extract_output_sections(extracted)
+        (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
+        (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
+
+        if embedded_entries:
+            for entry_type, entry_slug, description in embedded_entries:
+                authoring.write_embedded_entry(
+                    character_dir,
+                    entry_type=entry_type,
+                    entry_slug=entry_slug,
+                    body=description,
+                    frontmatter=None,
+                )
+        elif draft.embedded_entries_notes:
+            _generate_embedded_entries_from_notes(
+                character_dir,
+                prompts_root,
+                draft.embedded_entries_notes,
+            )
+
+        audit = authoring.audit_character(sources_root, slug, strict=False)
+        _print_audit(audit)
+        if not audit.ok:
+            return 1
+    except Exception as exc:
+        if character_dir and character_dir.exists():
+            authoring.delete_character_dirs([character_dir])
+            print(f"Schema workflow failed; cleaned up {character_dir}.", file=sys.stderr)
+        print(f"Schema workflow failed: {exc}", file=sys.stderr)
+        return 1
+
+    print("Schema authoring complete. Run `bp build` to generate dist outputs.")
     return 0
 
 
@@ -368,6 +495,20 @@ def _select_staging_file(sources_root: Path, provided: str | None) -> Path | Non
     return paths[choice - 1] if choice is not None else None
 
 
+def _prompt_schema_path() -> Path | None:
+    response = input("Enter schema .md file path (press Enter to cancel): ").strip()
+    if not response:
+        return None
+    path = Path(response)
+    if not path.exists():
+        print(f"Schema file not found: {path}", file=sys.stderr)
+        return None
+    if path.suffix.lower() != ".md":
+        print("Schema file must be a .md file.", file=sys.stderr)
+        return None
+    return path
+
+
 def _choose_section(sections: list[authoring.HeadingSection]) -> authoring.HeadingSection | None:
     titles = [section.title for section in sections]
     query = _prompt_text("Heading title (exact text; press Enter to cancel)")
@@ -420,14 +561,17 @@ def _prompt_author_mode() -> str | None:
     print("Select authoring workflow:")
     print("1. Create new canonical character")
     print("2. Create character variants from staging drafts")
+    print("3. Create canonical character from schema (.md file)")
     while True:
-        response = input("Mode selection (1-2, press Enter to cancel): ").strip()
+        response = input("Mode selection (1-3, press Enter to cancel): ").strip()
         if not response:
             return None
         if response == "1":
             return "canonical"
         if response == "2":
             return "variants"
+        if response == "3":
+            return "schema"
         print("Invalid selection. Try again.", file=sys.stderr)
 
 
@@ -542,9 +686,13 @@ def _format_variant_prompt_payload(canonical_text: str, variant_description: str
     ).strip() + "\n"
 
 
-def _invoke_llm(compiled_prompt: str) -> llm_client.LLMResult:
+def _invoke_llm(compiled_prompt: str, label: str = "LLM request") -> llm_client.LLMResult:
     config = llm_client.load_llm_config()
-    return llm_client.invoke_llm(compiled_prompt, config)
+    print(f"Loading... {label} in progress.")
+    sys.stdout.flush()
+    result = llm_client.invoke_llm(compiled_prompt, config)
+    print(f"{label} complete.")
+    return result
 
 
 def _prompt_text(label: str, default: str | None = None) -> str:
@@ -599,7 +747,7 @@ def _prompt_embedded_entries_auto(
     prompt_path = _select_prompt(prompts_root, "embedded_entries_auto")
     input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
     compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
-    llm_result = _invoke_llm(compiled_prompt)
+    llm_result = _invoke_llm(compiled_prompt, label="Embedded entries (auto)")
     authoring.write_embedded_entries_log(
         run_dir / "embedded_entries_auto.md",
         prompt_compiled=compiled_prompt,
@@ -655,7 +803,7 @@ def _prompt_embedded_entries_from_input(
                 continue
             input_payload = _format_embedded_entries_input_payload(entry_type, name, description)
             compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY INPUT")
-            llm_result = _invoke_llm(compiled_prompt)
+            llm_result = _invoke_llm(compiled_prompt, label="Embedded entry")
             attempt_index += 1
             try:
                 entry = authoring.parse_embedded_entry_response(llm_result.output_text)
@@ -809,6 +957,70 @@ def _format_embedded_entries_auto_payload(entry_types: Iterable[str], maximum: i
 
 def _format_embedded_entries_input_payload(entry_type: str, name: str, description: str) -> str:
     return f"Entry type: {entry_type}\nName: {name}\nDescription: {description}"
+
+
+def _build_schema_elaboration_input(draft: authoring.MinimalStagingDraft) -> str:
+    if draft.elaborate_notes:
+        return f"{draft.concept}\n\nELABORATION NOTES:\n{draft.elaborate_notes}"
+    return draft.concept
+
+
+def _apply_schema_draft_edits(elaboration: str, draft_edits: str) -> str:
+    if not draft_edits:
+        return elaboration.rstrip() + "\n"
+    return (
+        elaboration.rstrip()
+        + "\n\n---\nDraft edits (from schema)\n---\n\n"
+        + draft_edits.strip()
+        + "\n"
+    )
+
+
+def _build_schema_extraction_input(draft_text: str, extraction_notes: str) -> str:
+    if extraction_notes:
+        return draft_text.rstrip() + "\n\nEXTRACTION NOTES:\n" + extraction_notes.strip() + "\n"
+    return draft_text
+
+
+def _generate_embedded_entries_from_notes(
+    character_dir: Path,
+    prompts_root: Path,
+    notes: str,
+) -> None:
+    prompt_path = _select_prompt(prompts_root, "embedded_entries_auto")
+    input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
+    input_payload = f"{input_payload}\n\nNOTES:\n{notes.strip()}\n"
+    compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
+    llm_result = _invoke_llm(compiled_prompt, label="Embedded entries (notes)")
+    run_dir = character_dir / "runs" / authoring.build_run_id(character_dir.name)
+    authoring.write_embedded_entries_log(
+        run_dir / "embedded_entries_auto_notes.md",
+        prompt_compiled=compiled_prompt,
+        output_text=llm_result.output_text,
+        model_info=llm_result.model_info,
+        input_payload=input_payload,
+    )
+    try:
+        entries_by_type = authoring.parse_embedded_entries_auto_response(
+            llm_result.output_text,
+            EMBEDDED_ENTRY_TYPES,
+            EMBEDDED_ENTRY_MAX,
+        )
+    except ValueError as exc:
+        print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
+        return
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        for entry in entries_by_type.get(entry_type, []):
+            frontmatter = {"title": entry.title}
+            if entry.scope_level_index is not None:
+                frontmatter["scopeLevelIndex"] = entry.scope_level_index
+            authoring.write_embedded_entry(
+                character_dir,
+                entry_type=entry_type,
+                entry_slug=entry.slug,
+                body=entry.description,
+                frontmatter=frontmatter,
+            )
 
 
 if __name__ == "__main__":

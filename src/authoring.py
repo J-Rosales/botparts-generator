@@ -56,6 +56,34 @@ class VariantGroup:
     variants: list[VariantDraft]
 
 
+@dataclass(frozen=True)
+class EmbeddedEntryDraft:
+    entry_type: str
+    title: str
+    description: str
+
+
+@dataclass(frozen=True)
+class MinimalStagingDraft:
+    concept: str
+    slug: str
+    display_name: str
+    elaborate_notes: str
+    draft_edits: str
+    extraction_notes: str
+    embedded_entries_notes: str
+    embedded_entries: list[EmbeddedEntryDraft]
+
+
+EMBEDDED_ENTRY_TYPE_MAP = {
+    "location": "locations",
+    "item": "items",
+    "knowledge": "knowledge",
+    "ideology": "ideology",
+    "relationship": "relationships",
+}
+
+
 def parse_staging_sections(text: str) -> list[HeadingSection]:
     sections: list[HeadingSection] = []
     current_title: str | None = None
@@ -89,6 +117,102 @@ def parse_staging_sections(text: str) -> list[HeadingSection]:
 
     flush()
     return sections
+
+
+def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
+    sections = parse_staging_sections(text)
+    if not sections:
+        raise ValueError("No headings found in staging draft template.")
+
+    def normalize(value: str) -> str:
+        return value.strip().lower()
+
+    def find_section(*names: str) -> HeadingSection | None:
+        normalized = {normalize(name) for name in names}
+        for section in sections:
+            if normalize(section.title) in normalized:
+                return section
+        return None
+
+    def required_section(*names: str) -> HeadingSection:
+        section = find_section(*names)
+        if section is None:
+            joined = ", ".join(names)
+            raise ValueError(f"Missing required section: {joined}.")
+        if not section.content.strip():
+            joined = ", ".join(names)
+            raise ValueError(f"Section '{joined}' must include content.")
+        return section
+
+    def first_nonempty_line(content: str) -> str:
+        for line in content.splitlines():
+            cleaned = line.strip()
+            if cleaned:
+                return cleaned
+        return ""
+
+    concept_section = required_section("Character concept (staging selection)")
+    slug_section = required_section("Slug")
+    display_section = required_section("Display name")
+    elaborate_section = find_section("Elaborate prompt notes")
+    draft_edits_section = find_section("Draft edits (manual)")
+    extraction_section = find_section("Extraction prompt notes")
+    embedded_section = find_section("Embedded entries", "Embedded entries notes")
+
+    concept = concept_section.content.strip()
+    slug = first_nonempty_line(slug_section.content)
+    display_name = first_nonempty_line(display_section.content)
+    if not slug:
+        raise ValueError("Slug section must include a slug value.")
+    if not display_name:
+        raise ValueError("Display name section must include a value.")
+
+    embedded_entries: list[EmbeddedEntryDraft] = []
+    embedded_entries_notes = ""
+    if embedded_section is not None:
+        embedded_entries_notes = embedded_section.content.strip()
+        embedded_level = embedded_section.level
+        current_type: str | None = None
+        start_index = sections.index(embedded_section) + 1
+        for section in sections[start_index:]:
+            if section.level <= embedded_level:
+                break
+            if section.level == embedded_level + 1:
+                raw = section.title.split(":", 1)[0].strip().lower()
+                entry_type = EMBEDDED_ENTRY_TYPE_MAP.get(raw)
+                if not entry_type:
+                    raise ValueError(
+                        "Embedded entry type must start with one of: "
+                        + ", ".join(sorted(EMBEDDED_ENTRY_TYPE_MAP.keys()))
+                    )
+                current_type = entry_type
+                continue
+            if section.level == embedded_level + 2:
+                if not current_type:
+                    raise ValueError("Embedded entry item found before type heading.")
+                description = section.content.strip()
+                if not description:
+                    raise ValueError(f"Embedded entry '{section.title}' has no description.")
+                embedded_entries.append(
+                    EmbeddedEntryDraft(
+                        entry_type=current_type,
+                        title=section.title.strip(),
+                        description=description,
+                    )
+                )
+                continue
+            raise ValueError(f"Unsupported embedded entry heading level: {section.level}.")
+
+    return MinimalStagingDraft(
+        concept=concept,
+        slug=slug,
+        display_name=display_name,
+        elaborate_notes=elaborate_section.content.strip() if elaborate_section else "",
+        draft_edits=draft_edits_section.content.strip() if draft_edits_section else "",
+        extraction_notes=extraction_section.content.strip() if extraction_section else "",
+        embedded_entries_notes=embedded_entries_notes,
+        embedded_entries=embedded_entries,
+    )
 
 
 def parse_variant_groups(text: str) -> list[VariantGroup]:
