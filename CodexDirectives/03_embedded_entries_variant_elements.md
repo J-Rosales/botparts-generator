@@ -32,11 +32,11 @@
 - Guardrail rules (max entries per type, naming conventions, and deterministic sorting).
 
 ## 5) Task Checklist (Itemized, Markable)
-- [ ] Define file format for embedded entries (e.g., Markdown with YAML frontmatter or JSON) under `sources/characters/<slug>/fragments/entries/<type>/<entry_slug>.md`.
-- [ ] Update `src/generator.py` to copy embedded entry files into `dist/src/data/characters/<slug>/fragments/entries/...` with stable ordering and a `.keep` placeholder where appropriate.
-- [ ] Add a manifest extension under `manifest.x` to list embedded entry fragment paths (no schema changes; keep in `x`).
-- [ ] Add guardrails: max entries per type, allowed filename pattern, and skip rules for empty/missing directories.
-- [ ] Update audit documentation to explain embedded entry expectations and optionality.
+- [x] Define file format for embedded entries (e.g., Markdown with YAML frontmatter or JSON) under `sources/characters/<slug>/fragments/entries/<type>/<entry_slug>.md`.
+- [x] Update `src/generator.py` to copy embedded entry files into `dist/src/data/characters/<slug>/fragments/entries/...` with stable ordering and a `.keep` placeholder where appropriate.
+- [x] Add a manifest extension under `manifest.x` to list embedded entry fragment paths (no schema changes; keep in `x`).
+- [x] Add guardrails: max entries per type, allowed filename pattern, and skip rules for empty/missing directories.
+- [x] Update audit documentation to explain embedded entry expectations and optionality.
 
 ## 6) Acceptance Criteria
 - Determinism conditions:

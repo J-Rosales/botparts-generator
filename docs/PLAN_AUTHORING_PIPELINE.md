@@ -210,6 +210,9 @@ prompt hashes, model/config, input hash, and output text under
 - Canonical fields are non-empty where required.
 - Variant directories are **optional**; only validate variant layouts if
   `variants/<variant_name>/` exists.
+- Embedded entries are **optional**; only validate entry layouts if
+  `fragments/entries/<type>/` exists, enforcing slug-like filenames
+  (`[a-z0-9][a-z0-9_-]*.md`) and the per-type entry limit.
 - If a variant is present, enforce:
   - `spec_v2_fields.md` exists and contains only delta fields.
   - `seed_phrase.txt` and `notes.md` are optional but recommended.

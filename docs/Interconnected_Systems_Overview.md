@@ -21,6 +21,13 @@ From an implementation perspective, these entries are generated during the varia
 
 This approach allows variants to feel richer and more reactive without bloating the base card. Instead of restating backstory everywhere, the system relies on targeted injections that activate when specific topics, entities, or situations arise during interaction.
 
+**On-disk format (deterministic, optional):**
+- Author embedded entries as Markdown files (optionally with YAML frontmatter) under
+  `sources/characters/<slug>/fragments/entries/<type>/<entry_slug>.md`.
+- Supported entry types: `locations`, `items`, `knowledge`, `ideology`, `relationships`.
+- Filenames must be slug-like (`[a-z0-9][a-z0-9_-]*.md`) and are copied verbatim into
+  `dist/src/data/characters/<slug>/fragments/entries/<type>/`.
+
 ## 4. Scope Layer System (Narrative Bounding)
 The scope layer system exists to prevent implausible or narratively absurd outcomes during variant generation. It formalizes the idea that not all consequences of a variant justification are equal: some changes are personal and local, while others would imply alterations to shared world canon. By default, variant generation is bounded to character- or variant-level scope.
 
