@@ -12,7 +12,7 @@ The character variant pipeline introduces controlled divergence from the canonic
 
 Implementation-wise, this pipeline treats variants as deltas applied to the canonical card. The author can choose to rely on fast, automated generation or intervene at intermediate stages to inject creativity and judgment. The output of this process is not a runtime toggle, but a set of alternative static `spec_v2` cards that are each internally coherent and schema-valid.
 
-Crucially, variants do not overwrite the base; they coexist as parallel interpretations. This allows users, at consumption time, to select the version of the character that best matches their desired tone, relationship state, or narrative context, while preserving consistency and traceability across all versions.
+Crucially, variants do not overwrite the base; they coexist as parallel interpretations. On disk, each variant lives under `sources/characters/<slug>/variants/<variant_name>/`, anchored by a human-written `seed_phrase.txt` and a delta-only `spec_v2_fields.md`. This allows users, at consumption time, to select the version of the character that best matches their desired tone, relationship state, or narrative context, while preserving consistency and traceability across all versions.
 
 ## 3. Embedded Entries as Variant Elements
 Many of the differences between variants are best expressed not as monolithic text fields, but as conditional, embedded entries. These include locations tied to personal history, significant items, specialized knowledge, ideological leanings, and relationships with other characters. Each entry represents a small, scoped unit of context that can be injected only when relevant.

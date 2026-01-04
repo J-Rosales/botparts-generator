@@ -1,0 +1,2 @@
+- Delta-only changes captured in spec_v2_fields.md.
+- Tone pass: muted, patient, introspective.

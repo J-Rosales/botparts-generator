@@ -58,8 +58,16 @@ sources/characters/<slug>/
     spec_v2_fields.md
     shortDescription.md
   variants/
-    <style>/
+    <variant_name>/
       spec_v2_fields.md
+      seed_phrase.txt
+      notes.md
+      runs/<run_id>/
+        prompt_ref.txt
+        prompt_compiled.md
+        model.json
+        input_hash.txt
+        output.md
   fragments/                # future authored fragments, not used in build yet
   runs/<run_id>/
     prompt_ref.txt
@@ -144,6 +152,12 @@ prompts/
     01_specv2_fields_v1.md
   rewrite_variants/
     01_compact_v1.md
+  tone/
+    01_tone_default.md
+  voice/
+    01_voice_default.md
+  style/
+    01_style_default.md
 ```
 
 ### Versioning + provenance
@@ -152,6 +166,26 @@ prompts/
   - `runs/<run_id>/prompt_ref.txt` → prompt file path + SHA256 hash
   - `runs/<run_id>/model.json` → model name + params
   - `runs/<run_id>/input_hash.txt` → hash of input payload
+
+### Variant prompt-family pipeline (Tone / Voice / Style)
+Variants are authored as **deltas** against the canonical card, using a prompt-family
+sequence that progressively constrains the variant before extraction:
+
+1. **Seed phrase** (`variants/<variant_name>/seed_phrase.txt`):
+   - A short, human-authored justification for the divergence (e.g., “She never left
+     the bunker after the first collapse.”).
+2. **Tone pass** (`prompts/tone/`):
+   - Establishes emotional framing and mood for the variant output.
+3. **Voice pass** (`prompts/voice/`):
+   - Aligns diction and conversational cadence to the chosen narrative voice.
+4. **Style pass** (`prompts/style/`):
+   - Enforces formatting and compositional rules used by the downstream extractor.
+5. **Delta extraction** (`variants/<variant_name>/spec_v2_fields.md`):
+   - Only the fields that differ from canonical are emitted (no full spec rewrite).
+
+Each authoring step should reuse `authoring.write_run_log()` so every variant run captures
+prompt hashes, model/config, input hash, and output text under
+`variants/<variant_name>/runs/<run_id>/`.
 
 ---
 
@@ -174,6 +208,12 @@ prompts/
   - `draft` → warnings allowed, but missing canonical fields triggers warning.
   - `locked` → missing canonical fields is an error.
 - Canonical fields are non-empty where required.
+- Variant directories are **optional**; only validate variant layouts if
+  `variants/<variant_name>/` exists.
+- If a variant is present, enforce:
+  - `spec_v2_fields.md` exists and contains only delta fields.
+  - `seed_phrase.txt` and `notes.md` are optional but recommended.
+  - `runs/<run_id>/` follows the standard run-log structure.
 - Optional: run JSON schema validation for build outputs (consistent with `tests/test_build_pipeline.py::test_schema_compliance`).
 
 ### Reporting

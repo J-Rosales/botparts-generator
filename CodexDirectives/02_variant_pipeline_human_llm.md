@@ -34,11 +34,11 @@
 - Updated audit guidance clarifying that variants are authored pre-build and included deterministically.
 
 ## 5) Task Checklist (Itemized, Markable)
-- [ ] Define variant folder layout in docs: `sources/characters/<slug>/variants/<variant_name>/spec_v2_fields.md`, `seed_phrase.txt`, `notes.md`, and `runs/<run_id>/`.
-- [ ] Specify that `spec_v2_fields.md` contains only delta fields for the variant (no full spec).
-- [ ] Document the Tone/Voice/Style prompt-family pipeline and how each contributes to variant deltas.
-- [ ] Extend authoring run documentation to require prompt hashing and model/config capture for variant runs (reuse `authoring.write_run_log`).
-- [ ] Add/extend audit documentation to ensure variant directories are optional and validated only if present.
+- [x] Define variant folder layout in docs: `sources/characters/<slug>/variants/<variant_name>/spec_v2_fields.md`, `seed_phrase.txt`, `notes.md`, and `runs/<run_id>/`.
+- [x] Specify that `spec_v2_fields.md` contains only delta fields for the variant (no full spec).
+- [x] Document the Tone/Voice/Style prompt-family pipeline and how each contributes to variant deltas.
+- [x] Extend authoring run documentation to require prompt hashing and model/config capture for variant runs (reuse `authoring.write_run_log`).
+- [x] Add/extend audit documentation to ensure variant directories are optional and validated only if present.
 
 ## 6) Acceptance Criteria
 - Determinism conditions:

@@ -10,6 +10,9 @@
   - `model.json` (model name + params)
   - `input_hash.txt` (hash of input payload)
   - `output.md` (raw model output)
+- **Variant authoring**: variant runs reuse `authoring.write_run_log()` under
+  `sources/characters/<slug>/variants/<variant_name>/runs/<run_id>/` to capture prompt hashes,
+  model/config, input hash, and output text.
 - **Elaboration output**: `_run_author` writes elaboration output to `sources/characters/<slug>/preliminary_draft.md` (overwrite).
 - **Extraction output**: `_run_author` reads `preliminary_draft.md`, extracts sections, and writes:
   - `sources/characters/<slug>/canonical/spec_v2_fields.md`
@@ -20,6 +23,8 @@
 - **Authoring module**: `src/authoring.py` (scaffold, prompt discovery, run logs, output parsing)
 - **Prompt templates**: `prompts/elaborate/01_elaborate_v1.md`, `prompts/extract_fields/01_specv2_fields_v1.md`
 - **Canonical output consumption**: `src/generator.py::_load_authored_manifest` reads `canonical/spec_v2_fields.md` and `canonical/shortDescription.md`
+- **Variant output consumption**: `src/generator.py::_build_variant_fragments` copies
+  `variants/<variant_name>/spec_v2_fields.md` into `dist/src/data/characters/<slug>/fragments/variants/<variant_name>/`
 
 ## Missing pieces found and minimal changes applied
 1. **Missing prompt_compiled.md in run logs**
