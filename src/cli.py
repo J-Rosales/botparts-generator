@@ -5,7 +5,7 @@ import difflib
 import os
 import sys
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 from src import authoring
 from src import llm_client
@@ -123,6 +123,13 @@ def _run_author(args: argparse.Namespace) -> int:
     sources_root = workspace / "sources"
     prompts_root = workspace / "prompts"
 
+    mode = _prompt_author_mode()
+    if mode is None:
+        print("Aborted.", file=sys.stderr)
+        return 1
+    if mode == "variants":
+        return _run_author_variants(args, sources_root, prompts_root)
+
     staging_path = _select_staging_file(sources_root, args.staging_file)
     if staging_path is None:
         print("No staging drafts found under sources/.", file=sys.stderr)
@@ -202,6 +209,96 @@ def _run_author(args: argparse.Namespace) -> int:
     if not audit.ok:
         return 1
     print("Authoring complete. Run `bp build` to generate dist outputs.")
+    return 0
+
+
+def _run_author_variants(
+    args: argparse.Namespace,
+    sources_root: Path,
+    prompts_root: Path,
+) -> int:
+    character_slug = _select_character_slug(sources_root)
+    if character_slug is None:
+        print("Aborted.", file=sys.stderr)
+        return 1
+    character_dir = sources_root / "characters" / character_slug
+    canonical_path = character_dir / "canonical" / "spec_v2_fields.md"
+    if not canonical_path.exists() or not canonical_path.read_text(encoding="utf-8").strip():
+        print(f"Missing canonical spec at {canonical_path}.", file=sys.stderr)
+        return 1
+
+    staging_path = _select_staging_file(sources_root, args.staging_file)
+    if staging_path is None:
+        print("No staging drafts found under sources/.", file=sys.stderr)
+        return 1
+    groups = authoring.parse_variant_groups(staging_path.read_text(encoding="utf-8"))
+    if not groups:
+        print("No variant groups found in staging drafts.", file=sys.stderr)
+        return 1
+    group = _choose_variant_group(groups)
+    if group is None:
+        print("Aborted.", file=sys.stderr)
+        return 1
+    if not group.variants:
+        print(f"No variants found under '{group.title}'.", file=sys.stderr)
+        return 1
+
+    prompt_path = _select_prompt(prompts_root, "rewrite_variants")
+    canonical_text = canonical_path.read_text(encoding="utf-8")
+    planned_variants: list[tuple[str, str, str]] = []
+    seen_slugs: set[str] = set()
+    for variant in group.variants:
+        variant_slug = authoring.slugify(variant.title)
+        try:
+            authoring.validate_slug(variant_slug)
+        except ValueError as exc:
+            print(f"Invalid variant slug for '{variant.title}': {exc}", file=sys.stderr)
+            return 1
+        if variant_slug in seen_slugs:
+            print(f"Duplicate variant slug '{variant_slug}' in staging drafts.", file=sys.stderr)
+            return 1
+        seen_slugs.add(variant_slug)
+        description = variant.description.strip()
+        if not description:
+            print(f"Missing variant description for '{variant.title}'.", file=sys.stderr)
+            return 1
+        planned_variants.append((variant.title, variant_slug, description))
+
+    for _, variant_slug, description in planned_variants:
+        variant_dir = character_dir / "variants" / variant_slug
+        variant_dir.mkdir(parents=True, exist_ok=True)
+        spec_path = variant_dir / "spec_v2_fields.md"
+
+        input_payload = _format_variant_prompt_payload(canonical_text, description)
+        compiled_prompt = _compile_variant_prompt([prompt_path], canonical_text, description)
+        llm_result = _invoke_llm(compiled_prompt)
+        spec_path.write_text(llm_result.output_text.rstrip() + "\n", encoding="utf-8")
+        run_dir = variant_dir / "runs" / authoring.build_run_id(variant_slug)
+        authoring.write_run_log(
+            run_dir,
+            [prompt_path],
+            compiled_prompt,
+            model_info=llm_result.model_info,
+            input_payload=input_payload,
+            output_text=llm_result.output_text,
+        )
+
+        variant_rel = spec_path.relative_to(Path.cwd())
+        print(f"Edit variant draft: {variant_rel.as_posix()}")
+        authoring.try_open_in_editor(spec_path)
+        input("Press enter once draft edits are saved...")
+        delta_fields = authoring.load_spec_fields(spec_path)
+        if not isinstance(delta_fields, dict):
+            print(f"Variant delta for '{variant_slug}' must be a JSON object.", file=sys.stderr)
+            return 1
+        try:
+            authoring.apply_variant_delta(canonical_path, spec_path)
+        except ValueError as exc:
+            print(f"Variant delta validation failed for '{variant_slug}': {exc}", file=sys.stderr)
+            return 1
+        _print_variant_fragment_summary(delta_fields, variant_slug)
+
+    print("Variant authoring complete. Run `bp build` to generate dist outputs.")
     return 0
 
 
@@ -295,6 +392,66 @@ def _choose_section(sections: list[authoring.HeadingSection]) -> authoring.Headi
     return authoring.select_section_by_title(sections, matches[choice - 1])
 
 
+def _choose_variant_group(groups: list[authoring.VariantGroup]) -> authoring.VariantGroup | None:
+    titles = [group.title for group in groups]
+    while True:
+        print("\nVariant groups:")
+        for index, title in enumerate(titles, start=1):
+            print(f"{index}. {title}")
+        response = input("Select variant group by number (press Enter to cancel): ").strip()
+        if not response:
+            return None
+        if response.isdigit():
+            choice = int(response)
+            if 1 <= choice <= len(groups):
+                return groups[choice - 1]
+        exact = authoring.select_section_by_title(
+            [authoring.HeadingSection(title=group.title, level=3, content="") for group in groups],
+            response,
+        )
+        if exact:
+            for group in groups:
+                if group.title == exact.title:
+                    return group
+        print("Invalid selection. Try again.", file=sys.stderr)
+
+
+def _prompt_author_mode() -> str | None:
+    print("Select authoring workflow:")
+    print("1. Create new canonical character")
+    print("2. Create character variants from staging drafts")
+    while True:
+        response = input("Mode selection (1-2, press Enter to cancel): ").strip()
+        if not response:
+            return None
+        if response == "1":
+            return "canonical"
+        if response == "2":
+            return "variants"
+        print("Invalid selection. Try again.", file=sys.stderr)
+
+
+def _select_character_slug(sources_root: Path) -> str | None:
+    character_dirs = authoring.list_character_dirs(sources_root)
+    if not character_dirs:
+        print("No authored characters found under sources/characters.", file=sys.stderr)
+        return None
+    print("\nAvailable characters:")
+    for index, path in enumerate(character_dirs, start=1):
+        print(f"{index}. {path.name}")
+    while True:
+        response = input("Select character by number or slug (press Enter to cancel): ").strip()
+        if not response:
+            return None
+        if response.isdigit():
+            choice = int(response)
+            if 1 <= choice <= len(character_dirs):
+                return character_dirs[choice - 1].name
+        if any(path.name == response for path in character_dirs):
+            return response
+        print("Invalid selection. Try again.", file=sys.stderr)
+
+
 def _prompt_slug(title: str, characters_root: Path) -> str | None:
     default_slug = authoring.slugify(title)
     if default_slug:
@@ -360,6 +517,29 @@ def _compile_prompt(prompt_paths: Iterable[Path], input_text: str, input_label: 
     normalized_input = input_text.strip()
     prompt_blocks.append(f"{input_label}:\n{normalized_input}")
     return "\n\n".join(block for block in prompt_blocks if block) + "\n"
+
+
+def _compile_variant_prompt(
+    prompt_paths: Iterable[Path],
+    canonical_text: str,
+    variant_description: str,
+) -> str:
+    prompt_blocks = [path.read_text(encoding="utf-8").strip() for path in prompt_paths]
+    prompt_blocks.append(f"CANONICAL CARD:\n{canonical_text.strip()}")
+    prompt_blocks.append(f"VARIANT DESCRIPTION:\n{variant_description.strip()}")
+    return "\n\n".join(block for block in prompt_blocks if block) + "\n"
+
+
+def _format_variant_prompt_payload(canonical_text: str, variant_description: str) -> str:
+    return "\n\n".join(
+        [
+            "CANONICAL CARD:",
+            canonical_text.strip(),
+            "",
+            "VARIANT DESCRIPTION:",
+            variant_description.strip(),
+        ]
+    ).strip() + "\n"
 
 
 def _invoke_llm(compiled_prompt: str) -> llm_client.LLMResult:
@@ -538,6 +718,27 @@ def _prompt_entry_count(label: str, maximum: int) -> int:
         if 0 <= count <= maximum:
             return count
         print(f"Count out of range (0-{maximum}).", file=sys.stderr)
+
+
+def _print_variant_fragment_summary(delta_fields: dict[str, Any], variant_slug: str) -> None:
+    fragment_keys = {
+        "persona",
+        "scenario",
+        "systemPrompt",
+        "system_prompt",
+        "lore",
+        "examples",
+        "firstMessage",
+        "alternateGreetings",
+        "greetings",
+        "first_mes",
+        "mes_example",
+    }
+    touched = sorted(key for key in delta_fields.keys() if key in fragment_keys)
+    if touched:
+        print(f"Variant '{variant_slug}' updates fragment fields: {', '.join(touched)}")
+    else:
+        print(f"Variant '{variant_slug}' does not update fragment fields.")
 
 
 def _prompt_numeric_value_optional(label: str) -> int | None:

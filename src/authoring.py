@@ -43,6 +43,18 @@ class EmbeddedEntry:
     score: int | float | None = None
 
 
+@dataclass(frozen=True)
+class VariantDraft:
+    title: str
+    description: str
+
+
+@dataclass(frozen=True)
+class VariantGroup:
+    title: str
+    variants: list[VariantDraft]
+
+
 def parse_staging_sections(text: str) -> list[HeadingSection]:
     sections: list[HeadingSection] = []
     current_title: str | None = None
@@ -78,11 +90,86 @@ def parse_staging_sections(text: str) -> list[HeadingSection]:
     return sections
 
 
+def parse_variant_groups(text: str) -> list[VariantGroup]:
+    groups: list[VariantGroup] = []
+    current_group_title: str | None = None
+    current_variants: list[VariantDraft] = []
+    current_variant_title: str | None = None
+    current_variant_lines: list[str] = []
+
+    def flush_variant() -> None:
+        nonlocal current_variant_title, current_variant_lines, current_variants
+        if current_variant_title is None:
+            return
+        content = "\n".join(current_variant_lines).strip()
+        if content:
+            content += "\n"
+        current_variants.append(
+            VariantDraft(title=current_variant_title, description=content)
+        )
+        current_variant_title = None
+        current_variant_lines = []
+
+    def flush_group() -> None:
+        nonlocal current_group_title, current_variants
+        if current_group_title is None:
+            return
+        flush_variant()
+        groups.append(VariantGroup(title=current_group_title, variants=current_variants))
+        current_group_title = None
+        current_variants = []
+
+    for line in text.splitlines():
+        match = HEADING_PATTERN.match(line)
+        if match:
+            level = len(match.group("level"))
+            title = match.group("title").strip()
+            if level <= 3:
+                flush_group()
+                if level == 3:
+                    current_group_title = title
+                continue
+            if level == 4 and current_group_title:
+                flush_variant()
+                current_variant_title = title
+                current_variant_lines = []
+                continue
+            if current_variant_title:
+                current_variant_lines.append(line)
+            continue
+        if current_variant_title is not None:
+            current_variant_lines.append(line)
+            continue
+
+    flush_group()
+    return groups
+
+
 def select_section_by_title(sections: Iterable[HeadingSection], title: str) -> HeadingSection | None:
     for section in sections:
         if section.title == title:
             return section
     return None
+
+
+def merge_spec_fields(base: dict[str, Any], delta: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = dict(base)
+    for key, value in delta.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = merge_spec_fields(merged[key], value)  # type: ignore[arg-type]
+        else:
+            merged[key] = value
+    return merged
+
+
+def apply_variant_delta(canonical_path: Path, delta_path: Path) -> dict[str, Any]:
+    canonical_fields = load_spec_fields(canonical_path)
+    if not isinstance(canonical_fields, dict):
+        raise ValueError("Canonical spec_v2_fields.md must contain a JSON object.")
+    delta_fields = load_spec_fields(delta_path)
+    if not isinstance(delta_fields, dict):
+        raise ValueError("Variant spec_v2_fields.md must contain a JSON object.")
+    return merge_spec_fields(canonical_fields, delta_fields)
 
 
 def slugify(value: str) -> str:
