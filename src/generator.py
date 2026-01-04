@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import os
 import shutil
 from dataclasses import dataclass
@@ -18,6 +19,10 @@ SITE_ONLY_FIELDS = {
     "aiTokens": None,
     "uploadDate": "",
 }
+EMBEDDED_ENTRY_TYPES = ("locations", "items", "knowledge", "ideology", "relationships")
+EMBEDDED_ENTRY_LIMIT = 50
+EMBEDDED_ENTRY_FILENAME = re.compile(r"^[a-z0-9][a-z0-9_-]*\.md$")
+EMBEDDED_ENTRY_PLACEHOLDERS = {".keep", ".gitkeep"}
 
 
 @dataclass
@@ -209,6 +214,81 @@ def _build_variant_fragments(
         (target_path / "spec_v2_fields.md").write_text(spec_path.read_text(encoding="utf-8"), encoding="utf-8")
         variants[style_dir.name] = str(relative_target.as_posix())
     return variants
+
+
+def _build_embedded_entry_fragments(
+    source_dir: Path | None,
+    fragments_dir: Path,
+    created_dirs: set[Path],
+    warnings: list[str],
+    slug: str,
+) -> dict[str, list[str]]:
+    if source_dir is None:
+        return {}
+    entries_root = source_dir / "fragments" / "entries"
+    if not entries_root.exists():
+        return {}
+    if not entries_root.is_dir():
+        warnings.append(f"[{slug}] Embedded entries root is not a directory; skipping.")
+        return {}
+
+    embedded_entries: dict[str, list[str]] = {}
+    output_entries_root = fragments_dir / "entries"
+    seen_types: set[str] = set()
+
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        source_type_dir = entries_root / entry_type
+        if not source_type_dir.exists() or not source_type_dir.is_dir():
+            continue
+        seen_types.add(entry_type)
+        output_type_dir = output_entries_root / entry_type
+        _ensure_dir(output_type_dir, created_dirs)
+
+        candidates = []
+        for path in sorted(source_type_dir.iterdir(), key=lambda item: item.name):
+            if path.is_dir():
+                warnings.append(f"[{slug}] Embedded entry '{entry_type}/{path.name}' is a directory; skipping.")
+                continue
+            if path.name in EMBEDDED_ENTRY_PLACEHOLDERS:
+                continue
+            if not EMBEDDED_ENTRY_FILENAME.match(path.name):
+                warnings.append(
+                    f"[{slug}] Embedded entry '{entry_type}/{path.name}' does not match naming rules; skipping."
+                )
+                continue
+            candidates.append(path)
+
+        if len(candidates) > EMBEDDED_ENTRY_LIMIT:
+            warnings.append(
+                f"[{slug}] Embedded entry '{entry_type}' exceeds limit of {EMBEDDED_ENTRY_LIMIT}; truncating."
+            )
+            candidates = candidates[:EMBEDDED_ENTRY_LIMIT]
+
+        if not candidates:
+            (output_type_dir / ".keep").write_text("", encoding="utf-8")
+            embedded_entries[entry_type] = []
+            continue
+
+        entry_paths: list[str] = []
+        for path in candidates:
+            target = output_type_dir / path.name
+            target.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+            entry_paths.append(
+                str((Path("fragments") / "entries" / entry_type / path.name).as_posix())
+            )
+        embedded_entries[entry_type] = entry_paths
+
+    unknown_types = sorted(
+        path.name for path in entries_root.iterdir() if path.is_dir() and path.name not in EMBEDDED_ENTRY_TYPES
+    )
+    if unknown_types:
+        warnings.append(f"[{slug}] Embedded entry types not recognized: {', '.join(unknown_types)}.")
+
+    if not seen_types:
+        _ensure_dir(output_entries_root, created_dirs)
+        (output_entries_root / ".keep").write_text("", encoding="utf-8")
+
+    return embedded_entries
 
 
 def _merge_manifest_data(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
@@ -499,11 +579,20 @@ def build_site_data(
             fragments_dir,
             created_dirs,
         )
+        embedded_entries = _build_embedded_entry_fragments(
+            Path(source_dir) if source_dir else None,
+            fragments_dir,
+            created_dirs,
+            warnings,
+            slug,
+        )
 
         manifest_x = dict(source_manifest.get("x") or {})
         manifest_x.update(site_fields)
         if variants:
             manifest_x["variants"] = variants
+        if embedded_entries:
+            manifest_x["embeddedEntries"] = embedded_entries
 
         base = {"fragments": fragments}
         modules = _map_modules(source_manifest)

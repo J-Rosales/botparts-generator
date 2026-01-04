@@ -9,11 +9,14 @@
 - Placeholder characters: 0
 - Total characters emitted: 1
 - Directories created:
-  - src\data
-  - src\data\characters
-  - src\data\characters\bunker-survivor
-  - src\data\characters\bunker-survivor\fragments
-  - src\data\fragments
+  - src/data
+  - src/data/characters
+  - src/data/characters/bunker-survivor
+  - src/data/characters/bunker-survivor/fragments
+  - src/data/characters/bunker-survivor/fragments/entries/items
+  - src/data/characters/bunker-survivor/fragments/entries/locations
+  - src/data/characters/bunker-survivor/fragments/entries/relationships
+  - src/data/fragments
 
 ## Field Policy Summary
 - Site-only fields emitted under x:
