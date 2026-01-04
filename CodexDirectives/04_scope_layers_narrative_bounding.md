@@ -32,11 +32,11 @@
 - A “promotion gate” rule: world-scoped entries require an explicit opt-in file (e.g., `sources/world/<pack>/PROMOTE.md` or `meta.yaml` flag).
 
 ## 5) Task Checklist (Itemized, Markable)
-- [ ] Define world-pack directory structure and required files under `sources/world/<pack>/`.
-- [ ] Specify scope labeling format for fragment files (frontmatter tags or JSON sidecars), including validation rules.
-- [ ] Update `src/generator.py` to discover world packs, route outputs by scope, and default to non-fatal behavior when packs are missing.
-- [ ] Add promotion gate logic (explicit approval file/flag) to allow world-scoped content into output.
-- [ ] Update documentation and audit guidance to explain scope layers and shared world packs.
+- [x] Define world-pack directory structure and required files under `sources/world/<pack>/`.
+- [x] Specify scope labeling format for fragment files (frontmatter tags or JSON sidecars), including validation rules.
+- [x] Update `src/generator.py` to discover world packs, route outputs by scope, and default to non-fatal behavior when packs are missing.
+- [x] Add promotion gate logic (explicit approval file/flag) to allow world-scoped content into output.
+- [x] Update documentation and audit guidance to explain scope layers and shared world packs.
 
 ## 6) Acceptance Criteria
 - Determinism conditions:

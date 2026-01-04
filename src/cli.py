@@ -29,6 +29,11 @@ def main(argv: Iterable[str] | None = None) -> int:
         action="store_true",
         help="Include timestamps in the report and index.json.",
     )
+    build_parser.add_argument(
+        "--strict-scope",
+        action="store_true",
+        help="Treat missing world packs or promotion gate failures as errors.",
+    )
 
     author_parser = subparsers.add_parser("author", help="Interactive authoring workflow.")
     author_parser.add_argument("--staging-file", help="Optional staging drafts file path.")
@@ -89,7 +94,14 @@ def _run_build(args: argparse.Namespace) -> int:
     placeholders = args.placeholders
     if placeholders is None:
         placeholders = _parse_placeholders(placeholders_env)
-    build_site_data(Path.cwd(), placeholders=placeholders, include_timestamps=args.include_timestamps)
+    strict_env = os.environ.get("BOTPARTS_SCOPE_STRICT", "0")
+    strict_scopes = args.strict_scope or strict_env == "1"
+    build_site_data(
+        Path.cwd(),
+        placeholders=placeholders,
+        include_timestamps=args.include_timestamps,
+        strict_scopes=strict_scopes,
+    )
     return 0
 
 
