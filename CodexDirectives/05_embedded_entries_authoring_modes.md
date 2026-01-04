@@ -42,20 +42,20 @@
 - All modes still call `authoring.write_embedded_entry(...)` for each generated entry.
 
 ## 5) Task Checklist (Itemized, Markable)
-- [ ] Add a mode selector to `src/cli.py` to choose Automatic, From Input Prompt, or Skip.
-- [ ] Implement Automatic mode:
-  - [ ] Define a prompt template in `prompts/` (new category, e.g., `embedded_entries_auto/`).
-  - [ ] Compile a single prompt that requests bounded counts for each entry type.
-  - [ ] Persist prompt + response in `sources/characters/<slug>/runs/<run_id>/embedded_entries_auto.md`.
-  - [ ] Parse response into structured entries per type and write via `authoring.write_embedded_entry(...)`.
-- [ ] Implement From Input Prompt mode:
-  - [ ] Add a line-based input loop per entry type in `src/cli.py`.
-  - [ ] Parse `name: description` lines; reject invalid lines with a clear error.
-  - [ ] Map `CONTINUE` and `NEXT` commands to control flow.
-  - [ ] For each line, call the LLM with a per-entry prompt template in `prompts/embedded_entries_from_input/`.
-  - [ ] Persist prompt + response per entry under `sources/characters/<slug>/runs/<run_id>/embedded_entries_from_input/`.
-- [ ] Add parsing/validation helpers to `src/authoring.py` or `src/cli.py` for LLM response safety.
-- [ ] Update `docs/` or `PROJECT.md` with the revised Step 7 description.
+- [x] Add a mode selector to `src/cli.py` to choose Automatic, From Input Prompt, or Skip.
+- [x] Implement Automatic mode:
+  - [x] Define a prompt template in `prompts/` (new category, e.g., `embedded_entries_auto/`).
+  - [x] Compile a single prompt that requests bounded counts for each entry type.
+  - [x] Persist prompt + response in `sources/characters/<slug>/runs/<run_id>/embedded_entries_auto.md`.
+  - [x] Parse response into structured entries per type and write via `authoring.write_embedded_entry(...)`.
+- [x] Implement From Input Prompt mode:
+  - [x] Add a line-based input loop per entry type in `src/cli.py`.
+  - [x] Parse `name: description` lines; reject invalid lines with a clear error.
+  - [x] Map `CONTINUE` and `NEXT` commands to control flow.
+  - [x] For each line, call the LLM with a per-entry prompt template in `prompts/embedded_entries_from_input/`.
+  - [x] Persist prompt + response per entry under `sources/characters/<slug>/runs/<run_id>/embedded_entries_from_input/`.
+- [x] Add parsing/validation helpers to `src/authoring.py` or `src/cli.py` for LLM response safety.
+- [x] Update `docs/` or `PROJECT.md` with the revised Step 7 description.
 
 ## 6) Acceptance Criteria
 - Determinism conditions:

@@ -35,6 +35,14 @@ class AuditResult:
         return not self.errors
 
 
+@dataclass(frozen=True)
+class EmbeddedEntry:
+    title: str
+    slug: str
+    description: str
+    score: int | float | None = None
+
+
 def parse_staging_sections(text: str) -> list[HeadingSection]:
     sections: list[HeadingSection] = []
     current_title: str | None = None
@@ -99,6 +107,40 @@ def validate_embedded_entry_slug(slug: str) -> None:
             "Invalid entry slug. Use lowercase letters, digits, hyphens, or underscores "
             "(example: observatory-bench)."
         )
+
+
+def parse_embedded_entries_auto_response(
+    output_text: str,
+    entry_types: Iterable[str],
+    max_per_type: int,
+) -> dict[str, list[EmbeddedEntry]]:
+    payload = _parse_json_payload(output_text, label="embedded entries")
+    entries_by_type: dict[str, list[EmbeddedEntry]] = {}
+    for entry_type in entry_types:
+        raw_entries = payload.get(entry_type, [])
+        if raw_entries is None:
+            raw_entries = []
+        if not isinstance(raw_entries, list):
+            raise ValueError(f"Embedded entries for '{entry_type}' must be a list.")
+        parsed = [_parse_embedded_entry_item(item, entry_type) for item in raw_entries]
+        parsed_sorted = sorted(parsed, key=lambda entry: entry.slug)
+        parsed_sorted = _dedupe_sorted_embedded_entries(parsed_sorted)
+        entries_by_type[entry_type] = parsed_sorted[:max_per_type]
+    return entries_by_type
+
+
+def parse_embedded_entry_response(output_text: str) -> EmbeddedEntry:
+    payload = _parse_json_payload(output_text, label="embedded entry")
+    return _parse_embedded_entry_item(payload, None)
+
+
+def parse_embedded_entry_input_line(line: str) -> tuple[str, str]:
+    if ":" not in line:
+        raise ValueError("Expected 'name: description' format.")
+    name, description = (part.strip() for part in line.split(":", 1))
+    if not name or not description:
+        raise ValueError("Both name and description are required.")
+    return name, description
 
 
 def find_staging_draft_paths(sources_root: Path) -> list[Path]:
@@ -167,6 +209,39 @@ def write_embedded_entry(
         lines.append("")
     entry_path.write_text("\n".join(lines), encoding="utf-8")
     return entry_path
+
+
+def write_embedded_entries_log(
+    log_path: Path,
+    prompt_compiled: str,
+    output_text: str,
+    model_info: dict[str, Any],
+    input_payload: str | None = None,
+) -> None:
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    sections: list[str] = ["# Embedded Entries LLM Log", ""]
+    if input_payload:
+        sections.extend(["## Input", "```", input_payload.strip(), "```", ""])
+    sections.extend(
+        [
+            "## Prompt",
+            "```",
+            prompt_compiled.strip(),
+            "```",
+            "",
+            "## Response",
+            "```",
+            output_text.strip(),
+            "```",
+            "",
+            "## Model",
+            "```json",
+            json_dumps(model_info).strip(),
+            "```",
+            "",
+        ]
+    )
+    log_path.write_text("\n".join(sections), encoding="utf-8")
 
 
 def write_staging_snapshot(character_dir: Path, section: HeadingSection) -> None:
@@ -349,6 +424,56 @@ def _extract_json_payload(text: str) -> str | None:
     if text.startswith("{") and text.endswith("}"):
         return text
     return None
+
+
+def _parse_json_payload(text: str, label: str) -> dict[str, Any]:
+    import json
+
+    payload_text = _extract_json_payload(text.strip())
+    if payload_text is None:
+        raise ValueError(f"Expected JSON payload for {label}.")
+    try:
+        payload = json.loads(payload_text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON for {label}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} payload must be a JSON object.")
+    return payload
+
+
+def _parse_embedded_entry_item(item: Any, entry_type: str | None) -> EmbeddedEntry:
+    if not isinstance(item, dict):
+        raise ValueError("Embedded entry must be a JSON object.")
+    title = _require_text_field(item.get("title"), "title", entry_type)
+    slug = _require_text_field(item.get("slug"), "slug", entry_type)
+    validate_embedded_entry_slug(slug)
+    description = _require_text_field(item.get("description"), "description", entry_type)
+    score = item.get("score")
+    if score is not None and not (isinstance(score, (int, float)) and not isinstance(score, bool)):
+        raise ValueError("Embedded entry score must be a number.")
+    return EmbeddedEntry(title=title, slug=slug, description=description, score=score)
+
+
+def _require_text_field(value: Any, field: str, entry_type: str | None) -> str:
+    if not isinstance(value, str):
+        type_label = f" for {entry_type}" if entry_type else ""
+        raise ValueError(f"Embedded entry {field} must be a string{type_label}.")
+    cleaned = value.strip()
+    if not cleaned:
+        type_label = f" for {entry_type}" if entry_type else ""
+        raise ValueError(f"Embedded entry {field} cannot be empty{type_label}.")
+    return cleaned
+
+
+def _dedupe_sorted_embedded_entries(entries: list[EmbeddedEntry]) -> list[EmbeddedEntry]:
+    seen: set[str] = set()
+    deduped: list[EmbeddedEntry] = []
+    for entry in entries:
+        if entry.slug in seen:
+            continue
+        seen.add(entry.slug)
+        deduped.append(entry)
+    return deduped
 
 
 def load_short_description(path: Path) -> str:

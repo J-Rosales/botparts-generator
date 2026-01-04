@@ -115,9 +115,13 @@ sources/characters/<slug>/
 7. **Run LLM “field extraction”**
    - Write `canonical/spec_v2_fields.md` and `canonical/shortDescription.md`.
    - Persist run logs under `runs/<run_id>/`.
-8. **Run `bp audit character <slug>`**
+8. **Author embedded entries**
+   - Choose one mode: Automatically, From Input Prompt, or Skip.
+   - Persist embedded entry prompt/response logs under `runs/<run_id>/`.
+   - Write embedded entry fragments under `fragments/entries/<type>/`.
+9. **Run `bp audit character <slug>`**
    - Display errors/warnings.
-9. **Export guidance**
+10. **Export guidance**
    - Authoring never writes to `dist/` directly; recommend running `bp build` for deterministic output.
 
 ### `bp author` menu
