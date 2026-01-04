@@ -60,7 +60,6 @@ sources/characters/<slug>/
   variants/
     <variant_name>/
       spec_v2_fields.md
-      seed_phrase.txt
       notes.md
       runs/<run_id>/
         prompt_ref.txt
@@ -87,6 +86,7 @@ sources/characters/<slug>/
 ### Staging intake
 - `staging_snapshot.md` is **intake-only**. The authoring tool snapshots a chosen heading section from a staging drafts file (see workflow) and writes it here.
 - `preliminary_draft.md` is editable by humans before canonical extraction.
+- Variant authoring also sources prompts from `sources/staging_drafts.md`: `###` headers define variant groups and `####` headers define variant descriptions for LLM deltas.
 
 > TODO: Confirm current source ingestion expectations in `src/generator.py` and existing sample `sources/characters/example-bot/manifest.json` before wiring `canonical/` into builds.
 
@@ -118,6 +118,20 @@ sources/characters/<slug>/
 8. **Author embedded entries**
    - Choose one mode: Automatically, From Input Prompt, or Skip.
    - Persist embedded entry prompt/response logs under `runs/<run_id>/`.
+
+### Create variant flow (from staging drafts)
+1. **Select character slug**
+   - Choose an existing `sources/characters/<slug>/` directory.
+2. **Parse variant groups**
+   - Read `sources/staging_drafts.md` and list `###` headings as variant groups.
+   - Within the chosen group, use `####` headings as variant names; the prose below is the prompt.
+3. **Generate variant delta drafts**
+   - Use `prompts/rewrite_variants/` to produce `variants/<variant_name>/spec_v2_fields.md` (delta only).
+   - Store run logs under `variants/<variant_name>/runs/<run_id>/`.
+4. **Manual edit pause**
+   - Open each draft in the editor and wait for confirmation before continuing.
+5. **Validate delta application**
+   - Apply deltas to canonical fields in-memory to confirm JSON validity and identify fragment-impacting fields.
    - Write embedded entry fragments under `fragments/entries/<type>/`.
 9. **Run `bp audit character <slug>`**
    - Display errors/warnings.
@@ -175,21 +189,18 @@ prompts/
 Variants are authored as **deltas** against the canonical card, using a prompt-family
 sequence that progressively constrains the variant before extraction:
 
-1. **Seed phrase** (`variants/<variant_name>/seed_phrase.txt`):
-   - A short, human-authored justification for the divergence (e.g., “She never left
-     the bunker after the first collapse.”).
-2. **Tone pass** (`prompts/tone/`):
-   - Establishes emotional framing and mood for the variant output.
-3. **Voice pass** (`prompts/voice/`):
-   - Aligns diction and conversational cadence to the chosen narrative voice.
-4. **Style pass** (`prompts/style/`):
-   - Enforces formatting and compositional rules used by the downstream extractor.
-5. **Delta extraction** (`variants/<variant_name>/spec_v2_fields.md`):
+1. **Staging draft prompt** (`sources/staging_drafts.md`):
+   - `###` headings define a variant group; `####` headings provide the natural-language prompt.
+2. **Variant rewrite prompt** (`prompts/rewrite_variants/`):
+   - Applies tone/style constraints and emits a compact delta-only spec for the variant.
+3. **Delta extraction** (`variants/<variant_name>/spec_v2_fields.md`):
    - Only the fields that differ from canonical are emitted (no full spec rewrite).
 
 Each authoring step should reuse `authoring.write_run_log()` so every variant run captures
 prompt hashes, model/config, input hash, and output text under
 `variants/<variant_name>/runs/<run_id>/`.
+
+> Note: `seed_phrase.txt` is deprecated for variant authoring in this workflow and is no longer required.
 
 ---
 
@@ -224,7 +235,7 @@ prompt hashes, model/config, input hash, and output text under
   or a JSON sidecar (`<filename>.scope.json`).
 - If a variant is present, enforce:
   - `spec_v2_fields.md` exists and contains only delta fields.
-  - `seed_phrase.txt` and `notes.md` are optional but recommended.
+  - `notes.md` is optional; `seed_phrase.txt` is deprecated and not required for staging-based variants.
   - `runs/<run_id>/` follows the standard run-log structure.
 - Optional: run JSON schema validation for build outputs (consistent with `tests/test_build_pipeline.py::test_schema_compliance`).
 
