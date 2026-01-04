@@ -228,6 +228,9 @@ def _merge_manifest_data(base: dict[str, Any], override: dict[str, Any]) -> dict
 
 
 def _load_authored_manifest(character_dir: Path, warnings: list[str]) -> dict[str, Any] | None:
+    # Deterministic, local-only inputs: the canonical spec fields are read from
+    # sources/characters/<slug>/canonical/spec_v2_fields.md and merged with
+    # manifest.json. No network or runtime data is consulted here.
     canonical_dir = character_dir / "canonical"
     spec_path = canonical_dir / "spec_v2_fields.md"
     if not spec_path.exists():
@@ -252,6 +255,7 @@ def _load_authored_manifest(character_dir: Path, warnings: list[str]) -> dict[st
             spec_fields["name"] = display_name
     short_description = authoring.load_short_description(canonical_dir / "shortDescription.md")
     if short_description:
+        # Site-only metadata stays under the schema extension block (x).
         spec_fields.setdefault("x", {})
         if isinstance(spec_fields["x"], dict):
             spec_fields["x"].setdefault("shortDescription", short_description)
@@ -370,6 +374,9 @@ def build_site_data(
     placeholders: int = 0,
     include_timestamps: bool = False,
 ) -> BuildSummary:
+    # This build is intentionally deterministic: identical inputs under sources/
+    # must emit byte-identical dist/src/data outputs. Avoid non-deterministic
+    # sources (network calls, current time, random) unless explicitly gated.
     warnings: list[str] = []
     created_dirs: set[Path] = set()
 

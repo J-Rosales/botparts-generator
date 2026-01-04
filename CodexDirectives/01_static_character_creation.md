@@ -34,10 +34,10 @@
 - A short, repo-grounded note referencing `docs/Interconnected_Systems_Overview.md` as the conceptual baseline.
 
 ## 5) Task Checklist (Itemized, Markable)
-- [ ] Document the canonical authoring directory layout and required files under `sources/characters/<slug>/canonical/` in `README.md` (or a new doc under `docs/`).
-- [ ] Add code comments in `src/generator.py::build_site_data` and `_load_authored_manifest` reinforcing determinism and schema boundaries.
-- [ ] Add or update a small audit/validation helper (if needed) without changing build output; keep diffs additive and reviewable.
-- [ ] Reference `docs/Interconnected_Systems_Overview.md` in the new/updated documentation.
+- [x] Document the canonical authoring directory layout and required files under `sources/characters/<slug>/canonical/` in `README.md` (or a new doc under `docs/`).
+- [x] Add code comments in `src/generator.py::build_site_data` and `_load_authored_manifest` reinforcing determinism and schema boundaries.
+- [x] Add or update a small audit/validation helper (if needed) without changing build output; keep diffs additive and reviewable.
+- [x] Reference `docs/Interconnected_Systems_Overview.md` in the new/updated documentation.
 
 ## 6) Acceptance Criteria
 - Determinism conditions:
