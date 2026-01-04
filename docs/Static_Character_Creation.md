@@ -15,6 +15,13 @@ sources/
       canonical/
         spec_v2_fields.md
         shortDescription.md
+      fragments/
+        entries/
+          locations/
+          items/
+          knowledge/
+          ideology/
+          relationships/
 ```
 
 ### Required files
@@ -25,6 +32,42 @@ sources/
 - `canonical/shortDescription.md`
   - Short, plain-text description.
   - Emitted under the schema extension block (`x.shortDescription`).
+
+### Canonical embedded entries (locations, items, knowledge, ideology, relationships)
+
+By the time a canonical character is considered “done,” you should also supply the **embedded entry fragments** that ground the character in concrete, reusable details. These are plain-text Markdown files authored under:
+
+```
+sources/characters/<slug>/fragments/entries/<type>/<entry_slug>.md
+```
+
+Supported entry types:
+- `locations`
+- `items`
+- `knowledge`
+- `ideology`
+- `relationships`
+
+Each file can be simple text (or Markdown with optional YAML frontmatter). The build copies these files verbatim into the deterministic output directory and wires them into the manifest as embedded entries.
+
+#### How to author these with input strings/numbers (no LLM required)
+
+When you draft the canonical spec (`spec_v2_fields.md`), also capture a short list of concrete, **string/number inputs** that should become embedded entries. These should line up with the casual “why this matters” ideas that you would later use to motivate variants (e.g., *“she never trusts authority after incident X”* or *“he spends every evening at the observatory”*).
+
+Use a quick checklist like:
+- **Locations**: 1–3 places the character reliably returns to (name + 1–2 sentence description).
+- **Items**: 1–3 objects with story weight (name + what it implies).
+- **Knowledge**: 1–3 facts the character uniquely knows (fact + source).
+- **Ideology**: 1–3 beliefs or principles (belief + origin/pressure).
+- **Relationships**: 1–3 ties (person + relationship status + a numeric “intensity” or “trust” score).
+
+Then turn each item into its own file:
+
+```
+sources/characters/<slug>/fragments/entries/relationships/older-sister.md
+```
+
+This keeps the canon grounded and makes later variants more consistent: the same **casual idea** used to justify a variant should already exist as a canonical fragment, so variants can emphasize, suppress, or reinterpret it without inventing new base facts.
 
 ### Deterministic build contract
 
@@ -38,4 +81,3 @@ sources/
 
 - Build: `src/generator.py::build_site_data`
 - Authoring helpers: `src/authoring.py::scaffold_character`
-
