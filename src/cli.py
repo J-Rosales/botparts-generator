@@ -1158,9 +1158,10 @@ def _build_schema_extraction_input(
         notes.append(f"PROSE VARIANT: {prose_variant}")
     notes.append(
         "GREETINGS REQUIREMENTS:\n"
-        "- Each greeting must mention a season.\n"
-        "- Each greeting must mention a location or setting.\n"
-        "- Each greeting must mention a named person where possible.\n"
+        "- Each greeting should mention a season; if unavailable, use a weekday or time of day.\n"
+        "- Each greeting should mention a location or setting; a situational anchor also works.\n"
+        "- Each greeting should mention a named person; if unavailable, reference who owns the place "
+        "or who the moment reminds the character of.\n"
         "- If details are missing, make up plausible ones consistent with the setting and time period."
     )
     if notes:

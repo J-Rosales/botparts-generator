@@ -451,23 +451,65 @@ def validate_spec_v2_llm_output(payload: dict[str, Any]) -> None:
         if len(set(cleaned_alternate)) != len(cleaned_alternate):
             errors.append("alternate_greetings entries must be unique.")
         if valid_first_mes:
-            _validate_greetings_context([first_mes] + cleaned_alternate, errors)
+            _validate_greetings_context([first_mes] + cleaned_alternate)
 
     if errors:
         raise ValueError("Spec_v2 validation failed: " + " ".join(errors))
 
 
-def _validate_greetings_context(greetings: list[str], errors: list[str]) -> None:
+def _validate_greetings_context(greetings: list[str]) -> list[str]:
     season_pattern = re.compile(r"\b(spring|summer|autumn|fall|winter)\b", re.IGNORECASE)
+    weekday_pattern = re.compile(
+        r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
+        re.IGNORECASE,
+    )
+    time_pattern = re.compile(
+        r"\b(morning|afternoon|evening|night|dawn|dusk|noon|midday|midnight)\b",
+        re.IGNORECASE,
+    )
     location_pattern = re.compile(r"\b(in|at|on|inside|outside|within|near)\b", re.IGNORECASE)
+    setting_pattern = re.compile(
+        r"\b(home|cabin|camp|harbor|dock|station|market|street|forest|temple|workshop|"
+        r"lab|office|kitchen|hall|garden|archive|ship|inn|tavern|library|studio|"
+        r"arena|court|palace|church|clinic|hospital|warehouse|hangar)\b",
+        re.IGNORECASE,
+    )
+    situation_pattern = re.compile(
+        r"\b(during the|on (duty|watch|patrol)|in transit|while (in|on))\b",
+        re.IGNORECASE,
+    )
     name_pattern = re.compile(r"\b[A-Z][a-z]{2,}\b")
+    reminds_pattern = re.compile(r"\breminds?\b.*\bof\b", re.IGNORECASE)
+    belongs_pattern = re.compile(r"\b(belongs to|owned by)\b", re.IGNORECASE)
+    possessive_pattern = re.compile(r"\b(his|her|their|my|your)\b", re.IGNORECASE)
+    warnings: list[str] = []
     for index, greeting in enumerate(greetings, start=1):
-        if not season_pattern.search(greeting):
-            errors.append(f"Greeting {index} must mention a season.")
-        if not location_pattern.search(greeting):
-            errors.append(f"Greeting {index} must mention a location or setting.")
-        if not name_pattern.search(greeting):
-            errors.append(f"Greeting {index} must mention a named person where possible.")
+        has_season = bool(season_pattern.search(greeting))
+        has_time = bool(weekday_pattern.search(greeting) or time_pattern.search(greeting))
+        if not (has_season or has_time):
+            warnings.append(
+                f"Greeting {index} should mention a season, weekday, or time of day."
+            )
+        has_location = bool(
+            location_pattern.search(greeting)
+            or setting_pattern.search(greeting)
+            or situation_pattern.search(greeting)
+        )
+        if not has_location:
+            warnings.append(
+                f"Greeting {index} should mention a location, setting, or situational anchor."
+            )
+        has_person = bool(
+            name_pattern.search(greeting)
+            or reminds_pattern.search(greeting)
+            or belongs_pattern.search(greeting)
+            or possessive_pattern.search(greeting)
+        )
+        if not has_person:
+            warnings.append(
+                f"Greeting {index} should mention a named person or reference who owns the place."
+            )
+    return warnings
 
 
 def parse_variant_groups(text: str) -> list[VariantGroup]:
