@@ -47,3 +47,18 @@ def test_auto_mode_bounded_entries() -> None:
     for entry_type in EMBEDDED_ENTRY_TYPES:
         slugs = [entry.slug for entry in parsed[entry_type]]
         assert slugs == [f"slug-{index:02d}" for index in range(10)]
+
+
+def test_select_embedded_entries_respects_target() -> None:
+    entries_by_type = {
+        "items": [
+            authoring.EmbeddedEntry(title="Item A", slug="item-a", description="A"),
+            authoring.EmbeddedEntry(title="Item B", slug="item-b", description="B"),
+        ],
+        "locations": [
+            authoring.EmbeddedEntry(title="Location A", slug="loc-a", description="A"),
+        ],
+    }
+    selected = authoring.select_embedded_entries(entries_by_type, 2)
+    assert len(selected) == 2
+    assert [entry.slug for _, entry in selected] == ["item-a", "item-b"]

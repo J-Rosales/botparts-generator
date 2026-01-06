@@ -12,7 +12,7 @@ from src import llm_client
 from src.generator import EMBEDDED_ENTRY_TYPES, build_site_data
 from src.secrets import load_secrets_file
 
-EMBEDDED_ENTRY_MAX = 10
+EMBEDDED_ENTRY_MAX = 2
 
 
 def main(argv: Iterable[str] | None = None) -> int:
@@ -44,6 +44,11 @@ def main(argv: Iterable[str] | None = None) -> int:
     author_parser.add_argument("--tone-category", default="tone")
     author_parser.add_argument("--voice-category", default="voice")
     author_parser.add_argument("--style-category", default="style")
+    author_parser.add_argument(
+        "--no-auto-build",
+        action="store_true",
+        help="Skip automatic build after authoring completes.",
+    )
 
     clean_parser = subparsers.add_parser(
         "author-clean",
@@ -107,6 +112,23 @@ def _run_build(args: argparse.Namespace) -> int:
     return 0
 
 
+def _maybe_auto_build(args: argparse.Namespace) -> int:
+    if getattr(args, "no_auto_build", False):
+        print("Auto-build skipped (--no-auto-build).")
+        return 0
+    placeholders = _parse_placeholders(os.environ.get("BOTPARTS_PLACEHOLDERS"))
+    strict_scopes = os.environ.get("BOTPARTS_SCOPE_STRICT", "0") == "1"
+    print("Running auto-build (bp build)...")
+    build_site_data(
+        Path.cwd(),
+        placeholders=placeholders,
+        include_timestamps=False,
+        strict_scopes=strict_scopes,
+    )
+    print("Auto-build complete.")
+    return 0
+
+
 def _run_author(args: argparse.Namespace) -> int:
     load_secrets_file()
     try:
@@ -128,9 +150,16 @@ def _run_author(args: argparse.Namespace) -> int:
         print("Aborted.", file=sys.stderr)
         return 1
     if mode == "variants":
-        return _run_author_variants(args, sources_root, prompts_root)
-    if mode == "schema":
-        return _run_author_schema(args, sources_root, prompts_root)
+        result = _run_author_variants(args, sources_root, prompts_root)
+    elif mode == "schema":
+        result = _run_author_schema(args, sources_root, prompts_root)
+    else:
+        result = None
+
+    if result is not None:
+        if result == 0:
+            return _maybe_auto_build(args)
+        return result
 
     staging_path = _select_staging_file(sources_root, args.staging_file)
     if staging_path is None:
@@ -204,14 +233,12 @@ def _run_author(args: argparse.Namespace) -> int:
     (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
     (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
 
-    _prompt_embedded_entries(character_dir, prompts_root)
-
     audit = authoring.audit_character(sources_root, slug, strict=False)
     _print_audit(audit)
     if not audit.ok:
         return 1
-    print("Authoring complete. Run `bp build` to generate dist outputs.")
-    return 0
+    print("Authoring complete.")
+    return _maybe_auto_build(args)
 
 
 def _run_author_variants(
@@ -319,30 +346,18 @@ def _run_author_schema(
         print(f"Schema parsing failed: {exc}", file=sys.stderr)
         return 1
 
-    slug = draft.slug.strip()
     display_name = draft.display_name.strip()
+    characters_root = sources_root / "characters"
+    existing_slugs = {path.name for path in authoring.list_character_dirs(sources_root)}
+    slug = authoring.generate_slug(display_name, existing_slugs)
     try:
         authoring.validate_slug(slug)
     except ValueError as exc:
-        print(f"Invalid slug '{slug}': {exc}", file=sys.stderr)
+        print(f"Generated slug '{slug}' is invalid: {exc}", file=sys.stderr)
         return 1
-    characters_root = sources_root / "characters"
+    print(f"Generated slug: {slug}")
     if (characters_root / slug).exists():
-        print(f"Slug '{slug}' already exists. Choose another.", file=sys.stderr)
-        return 1
-
-    embedded_entries: list[tuple[str, str, str]] = []
-    seen_entry_slugs: set[str] = set()
-    try:
-        for entry in draft.embedded_entries:
-            entry_slug = authoring.slugify(entry.title)
-            authoring.validate_embedded_entry_slug(entry_slug)
-            if entry_slug in seen_entry_slugs:
-                raise ValueError(f"Duplicate embedded entry slug: {entry_slug}")
-            seen_entry_slugs.add(entry_slug)
-            embedded_entries.append((entry.entry_type, entry_slug, entry.description))
-    except ValueError as exc:
-        print(f"Embedded entry validation failed: {exc}", file=sys.stderr)
+        print(f"Slug '{slug}' already exists. Re-run to generate a new timestamp.", file=sys.stderr)
         return 1
 
     character_dir: Path | None = None
@@ -353,11 +368,37 @@ def _run_author_schema(
             authoring.HeadingSection(title="Character concept", level=1, content=draft.concept + "\n"),
         )
 
-        elaborate_prompt = _select_prompt(prompts_root, args.prompt_category)
-        tone_prompt = _select_prompt(prompts_root, args.tone_category, allow_skip=True)
-        voice_prompt = _select_prompt(prompts_root, args.voice_category, allow_skip=True)
-        style_prompt = _select_prompt(prompts_root, args.style_category, allow_skip=True)
-        extract_prompt = _select_prompt(prompts_root, args.extract_category)
+        manifest_prompts = draft.manifest.prompts
+        elaborate_prompt = _resolve_manifest_prompt(
+            prompts_root,
+            args.prompt_category,
+            manifest_prompts["elaborate"],
+            "prompts.elaborate",
+        )
+        tone_prompt = _resolve_manifest_prompt(
+            prompts_root,
+            args.tone_category,
+            manifest_prompts["tone"],
+            "prompts.tone",
+        )
+        voice_prompt = _resolve_manifest_prompt(
+            prompts_root,
+            args.voice_category,
+            manifest_prompts["voice"],
+            "prompts.voice",
+        )
+        style_prompt = _resolve_manifest_prompt(
+            prompts_root,
+            args.style_category,
+            manifest_prompts["style"],
+            "prompts.style",
+        )
+        extract_prompt = _resolve_manifest_prompt(
+            prompts_root,
+            args.extract_category,
+            manifest_prompts["extract_fields"],
+            "prompts.extract_fields",
+        )
 
         prompt_paths = [elaborate_prompt]
         for optional_prompt in (tone_prompt, voice_prompt, style_prompt):
@@ -379,9 +420,18 @@ def _run_author_schema(
             output_text=elaboration,
         )
         draft_text = _apply_schema_draft_edits(elaboration, draft.draft_edits)
-        (character_dir / "preliminary_draft.md").write_text(draft_text, encoding="utf-8")
+        preliminary_path = character_dir / "preliminary_draft.md"
+        preliminary_path.write_text(draft_text, encoding="utf-8")
+        print(f"Review and edit: {preliminary_path.relative_to(Path.cwd()).as_posix()}")
+        authoring.try_open_in_editor(preliminary_path)
+        input("Press Enter once draft edits are saved...")
+        draft_input = preliminary_path.read_text(encoding="utf-8")
 
-        extraction_input = _build_schema_extraction_input(draft_text, draft.extraction_notes)
+        extraction_input = _build_schema_extraction_input(
+            draft_input,
+            draft.extraction_notes,
+            draft.manifest.prose_variant,
+        )
         compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
         llm_result = _invoke_llm(compiled_extraction, label="Extraction")
         extracted = llm_result.output_text
@@ -395,24 +445,22 @@ def _run_author_schema(
             output_text=extracted,
         )
         spec_text, short_desc = authoring.extract_output_sections(extracted)
-        (character_dir / "canonical" / "spec_v2_fields.md").write_text(spec_text, encoding="utf-8")
+        try:
+            spec_payload = authoring.parse_json_payload(spec_text, label="spec_v2")
+        except ValueError as exc:
+            raise ValueError(f"Spec_v2 JSON parsing failed: {exc}") from exc
+        spec_payload["slug"] = slug
+        authoring.validate_spec_v2_llm_output(spec_payload)
+        (character_dir / "canonical" / "spec_v2_fields.md").write_text(
+            authoring.json_dumps(spec_payload),
+            encoding="utf-8",
+        )
         (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
-
-        if embedded_entries:
-            for entry_type, entry_slug, description in embedded_entries:
-                authoring.write_embedded_entry(
-                    character_dir,
-                    entry_type=entry_type,
-                    entry_slug=entry_slug,
-                    body=description,
-                    frontmatter=None,
-                )
-        elif draft.embedded_entries_notes:
-            _generate_embedded_entries_from_notes(
-                character_dir,
-                prompts_root,
-                draft.embedded_entries_notes,
-            )
+        _generate_embedded_entries_from_notes(
+            character_dir,
+            prompts_root,
+            draft.manifest.embedded_entries_transform_notes,
+        )
 
         audit = authoring.audit_character(sources_root, slug, strict=False)
         _print_audit(audit)
@@ -425,7 +473,7 @@ def _run_author_schema(
         print(f"Schema workflow failed: {exc}", file=sys.stderr)
         return 1
 
-    print("Schema authoring complete. Run `bp build` to generate dist outputs.")
+    print("Schema authoring complete.")
     return 0
 
 
@@ -656,6 +704,37 @@ def _select_prompt(prompts_root: Path, category: str, allow_skip: bool = False) 
     return templates[choice - 1]
 
 
+def _resolve_manifest_prompt(
+    prompts_root: Path,
+    category: str,
+    template_name: str,
+    prompt_key: str,
+) -> Path:
+    prompt_dir = prompts_root / category
+    while True:
+        resolved = _resolve_prompt_candidate(prompt_dir, template_name)
+        if resolved is not None:
+            return resolved
+        print(
+            f"Missing prompt template for {prompt_key}='{template_name}'.",
+            file=sys.stderr,
+        )
+        print(f"Expected directory: {prompt_dir}", file=sys.stderr)
+        template_name = input(f"Enter template name for {prompt_key}: ").strip()
+        if not template_name:
+            print("Template name is required.", file=sys.stderr)
+
+
+def _resolve_prompt_candidate(prompt_dir: Path, template_name: str) -> Path | None:
+    candidates = [prompt_dir / template_name]
+    if not template_name.endswith(".md"):
+        candidates.append(prompt_dir / f"{template_name}.md")
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_file():
+            return candidate
+    return None
+
+
 def _compile_prompt(prompt_paths: Iterable[Path], input_text: str, input_label: str) -> str:
     prompt_blocks = [path.read_text(encoding="utf-8").strip() for path in prompt_paths]
     normalized_input = input_text.strip()
@@ -764,18 +843,24 @@ def _prompt_embedded_entries_auto(
     except ValueError as exc:
         print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
         return
-    for entry_type in EMBEDDED_ENTRY_TYPES:
-        for entry in entries_by_type.get(entry_type, []):
-            frontmatter = {"title": entry.title}
-            if entry.scope_level_index is not None:
-                frontmatter["scopeLevelIndex"] = entry.scope_level_index
-            authoring.write_embedded_entry(
-                character_dir,
-                entry_type=entry_type,
-                entry_slug=entry.slug,
-                body=entry.description,
-                frontmatter=frontmatter,
-            )
+    selected = authoring.select_embedded_entries(entries_by_type, EMBEDDED_ENTRY_MAX)
+    if len(selected) < EMBEDDED_ENTRY_MAX:
+        print(
+            f"Embedded entry generation produced {len(selected)} entries; expected {EMBEDDED_ENTRY_MAX}.",
+            file=sys.stderr,
+        )
+        return
+    for entry_type, entry in selected:
+        frontmatter = {"title": entry.title}
+        if entry.scope_level_index is not None:
+            frontmatter["scopeLevelIndex"] = entry.scope_level_index
+        authoring.write_embedded_entry(
+            character_dir,
+            entry_type=entry_type,
+            entry_slug=entry.slug,
+            body=entry.description,
+            frontmatter=frontmatter,
+        )
 
 
 def _prompt_embedded_entries_from_input(
@@ -950,9 +1035,9 @@ def _parse_embedded_entries_input(line: str) -> tuple[str, str | None, str | Non
     return "ENTRY", name, description
 
 
-def _format_embedded_entries_auto_payload(entry_types: Iterable[str], maximum: int) -> str:
-    lines = [f"- {entry_type} (max {maximum})" for entry_type in entry_types]
-    return "Entry types:\n" + "\n".join(lines)
+def _format_embedded_entries_auto_payload(entry_types: Iterable[str], target: int) -> str:
+    lines = [f"- {entry_type}" for entry_type in entry_types]
+    return "Entry types:\n" + "\n".join(lines) + f"\n\nTarget total entries: {target}"
 
 
 def _format_embedded_entries_input_payload(entry_type: str, name: str, description: str) -> str:
@@ -976,10 +1061,20 @@ def _apply_schema_draft_edits(elaboration: str, draft_edits: str) -> str:
     )
 
 
-def _build_schema_extraction_input(draft_text: str, extraction_notes: str) -> str:
+def _build_schema_extraction_input(
+    draft_text: str,
+    extraction_notes: str,
+    prose_variant: str,
+) -> str:
+    base = draft_text.rstrip()
+    notes: list[str] = []
+    if prose_variant:
+        notes.append(f"PROSE VARIANT: {prose_variant}")
     if extraction_notes:
-        return draft_text.rstrip() + "\n\nEXTRACTION NOTES:\n" + extraction_notes.strip() + "\n"
-    return draft_text
+        notes.append(f"EXTRACTION NOTES:\n{extraction_notes.strip()}")
+    if notes:
+        return base + "\n\n" + "\n\n".join(notes) + "\n"
+    return base + "\n"
 
 
 def _generate_embedded_entries_from_notes(
@@ -987,9 +1082,10 @@ def _generate_embedded_entries_from_notes(
     prompts_root: Path,
     notes: str,
 ) -> None:
-    prompt_path = _select_prompt(prompts_root, "embedded_entries_auto")
+    prompt_path = _resolve_embedded_entries_prompt(prompts_root)
     input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
-    input_payload = f"{input_payload}\n\nNOTES:\n{notes.strip()}\n"
+    if notes.strip():
+        input_payload = f"{input_payload}\n\nNOTES:\n{notes.strip()}\n"
     compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
     llm_result = _invoke_llm(compiled_prompt, label="Embedded entries (notes)")
     run_dir = character_dir / "runs" / authoring.build_run_id(character_dir.name)
@@ -1009,18 +1105,31 @@ def _generate_embedded_entries_from_notes(
     except ValueError as exc:
         print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
         return
-    for entry_type in EMBEDDED_ENTRY_TYPES:
-        for entry in entries_by_type.get(entry_type, []):
-            frontmatter = {"title": entry.title}
-            if entry.scope_level_index is not None:
-                frontmatter["scopeLevelIndex"] = entry.scope_level_index
-            authoring.write_embedded_entry(
-                character_dir,
-                entry_type=entry_type,
-                entry_slug=entry.slug,
-                body=entry.description,
-                frontmatter=frontmatter,
-            )
+    selected = authoring.select_embedded_entries(entries_by_type, EMBEDDED_ENTRY_MAX)
+    if len(selected) < EMBEDDED_ENTRY_MAX:
+        print(
+            f"Embedded entry generation produced {len(selected)} entries; expected {EMBEDDED_ENTRY_MAX}.",
+            file=sys.stderr,
+        )
+        return
+    for entry_type, entry in selected:
+        frontmatter = {"title": entry.title}
+        if entry.scope_level_index is not None:
+            frontmatter["scopeLevelIndex"] = entry.scope_level_index
+        authoring.write_embedded_entry(
+            character_dir,
+            entry_type=entry_type,
+            entry_slug=entry.slug,
+            body=entry.description,
+            frontmatter=frontmatter,
+        )
+
+
+def _resolve_embedded_entries_prompt(prompts_root: Path) -> Path:
+    templates = authoring.list_prompt_templates(prompts_root, "embedded_entries_auto")
+    if not templates:
+        raise FileNotFoundError(f"No prompts found in {prompts_root / 'embedded_entries_auto'}")
+    return templates[0]
 
 
 if __name__ == "__main__":
