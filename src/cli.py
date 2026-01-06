@@ -37,14 +37,58 @@ def main(argv: Iterable[str] | None = None) -> int:
         help="Treat missing world packs or promotion gate failures as errors.",
     )
 
-    author_parser = subparsers.add_parser("author", help="Interactive authoring workflow.")
-    author_parser.add_argument("--staging-file", help="Optional staging drafts file path.")
-    author_parser.add_argument("--prompt-category", default="elaborate")
-    author_parser.add_argument("--extract-category", default="extract_fields")
-    author_parser.add_argument("--tone-category", default="tone")
-    author_parser.add_argument("--voice-category", default="voice")
-    author_parser.add_argument("--style-category", default="style")
-    author_parser.add_argument(
+    author_parser = subparsers.add_parser("author", help="Authoring workflows.")
+    author_subparsers = author_parser.add_subparsers(dest="author_command", required=True)
+    author_canonical = author_subparsers.add_parser("canonical", help="Create new canonical character.")
+    author_canonical.add_argument("--staging-file", help="Optional staging drafts file path.")
+    author_canonical.add_argument("--prompt-category", default="elaborate")
+    author_canonical.add_argument("--extract-category", default="extract_fields")
+    author_canonical.add_argument("--tone-category", default="tone")
+    author_canonical.add_argument("--voice-category", default="voice")
+    author_canonical.add_argument("--style-category", default="style")
+    author_canonical.add_argument(
+        "--no-auto-build",
+        action="store_true",
+        help="Skip automatic build after authoring completes.",
+    )
+
+    author_variants = author_subparsers.add_parser(
+        "variants",
+        help="Create character variants from staging drafts.",
+    )
+    author_variants.add_argument("--staging-file", help="Optional staging drafts file path.")
+    author_variants.add_argument(
+        "--no-auto-build",
+        action="store_true",
+        help="Skip automatic build after authoring completes.",
+    )
+
+    author_schema = author_subparsers.add_parser(
+        "schema",
+        help="Create character from schema (.md file).",
+    )
+    author_schema.add_argument("schema_file", help="Schema .md file path.")
+    author_schema.add_argument("--prompt-category", default="elaborate")
+    author_schema.add_argument("--extract-category", default="extract_fields")
+    author_schema.add_argument("--tone-category", default="tone")
+    author_schema.add_argument("--voice-category", default="voice")
+    author_schema.add_argument("--style-category", default="style")
+    author_schema.add_argument(
+        "--no-auto-build",
+        action="store_true",
+        help="Skip automatic build after authoring completes.",
+    )
+
+    author_schema_folder = author_subparsers.add_parser(
+        "schema-folder",
+        help="Create multiple characters from folder.",
+    )
+    author_schema_folder.add_argument("--prompt-category", default="elaborate")
+    author_schema_folder.add_argument("--extract-category", default="extract_fields")
+    author_schema_folder.add_argument("--tone-category", default="tone")
+    author_schema_folder.add_argument("--voice-category", default="voice")
+    author_schema_folder.add_argument("--style-category", default="style")
+    author_schema_folder.add_argument(
         "--no-auto-build",
         action="store_true",
         help="Skip automatic build after authoring completes.",
@@ -145,22 +189,25 @@ def _run_author(args: argparse.Namespace) -> int:
     sources_root = workspace / "sources"
     prompts_root = workspace / "prompts"
 
-    mode = _prompt_author_mode()
-    if mode is None:
-        print("Aborted.", file=sys.stderr)
-        return 1
-    if mode == "variants":
+    if args.author_command == "variants":
         result = _run_author_variants(args, sources_root, prompts_root)
-    elif mode == "schema":
+    elif args.author_command == "schema":
         result = _run_author_schema(args, sources_root, prompts_root)
+    elif args.author_command == "schema-folder":
+        result = _run_author_schema_folder(args, sources_root, prompts_root)
     else:
-        result = None
+        result = _run_author_canonical(args, sources_root, prompts_root)
 
-    if result is not None:
-        if result == 0:
-            return _maybe_auto_build(args)
-        return result
+    if result == 0 and not args.no_auto_build:
+        return _maybe_auto_build(args)
+    return result
 
+
+def _run_author_canonical(
+    args: argparse.Namespace,
+    sources_root: Path,
+    prompts_root: Path,
+) -> int:
     staging_path = _select_staging_file(sources_root, args.staging_file)
     if staging_path is None:
         print("No staging drafts found under sources/.", file=sys.stderr)
@@ -238,7 +285,7 @@ def _run_author(args: argparse.Namespace) -> int:
     if not audit.ok:
         return 1
     print("Authoring complete.")
-    return _maybe_auto_build(args)
+    return 0
 
 
 def _run_author_variants(
@@ -336,9 +383,45 @@ def _run_author_schema(
     sources_root: Path,
     prompts_root: Path,
 ) -> int:
-    schema_path = _prompt_schema_path()
-    if schema_path is None:
-        print("Aborted.", file=sys.stderr)
+    schema_path = Path(args.schema_file)
+    return _run_author_schema_file(schema_path, args, sources_root, prompts_root)
+
+
+def _run_author_schema_folder(
+    args: argparse.Namespace,
+    sources_root: Path,
+    prompts_root: Path,
+) -> int:
+    schema_dir = sources_root / "schema_inputs"
+    if not schema_dir.exists():
+        print(f"Schema folder not found: {schema_dir}", file=sys.stderr)
+        return 1
+    schema_paths = sorted(path for path in schema_dir.iterdir() if path.suffix.lower() == ".md")
+    if not schema_paths:
+        print(f"No schema .md files found under {schema_dir}", file=sys.stderr)
+        return 1
+    failures = 0
+    for schema_path in schema_paths:
+        result = _run_author_schema_file(schema_path, args, sources_root, prompts_root)
+        if result != 0:
+            failures += 1
+    if failures:
+        print(f"Schema folder authoring completed with {failures} failure(s).", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _run_author_schema_file(
+    schema_path: Path,
+    args: argparse.Namespace,
+    sources_root: Path,
+    prompts_root: Path,
+) -> int:
+    if not schema_path.exists():
+        print(f"Schema file not found: {schema_path}", file=sys.stderr)
+        return 1
+    if schema_path.suffix.lower() != ".md":
+        print(f"Schema file must be a .md file: {schema_path}", file=sys.stderr)
         return 1
     try:
         draft = authoring.parse_minimal_staging_draft(schema_path.read_text(encoding="utf-8"))
@@ -543,20 +626,6 @@ def _select_staging_file(sources_root: Path, provided: str | None) -> Path | Non
     return paths[choice - 1] if choice is not None else None
 
 
-def _prompt_schema_path() -> Path | None:
-    response = input("Enter schema .md file path (press Enter to cancel): ").strip()
-    if not response:
-        return None
-    path = Path(response)
-    if not path.exists():
-        print(f"Schema file not found: {path}", file=sys.stderr)
-        return None
-    if path.suffix.lower() != ".md":
-        print("Schema file must be a .md file.", file=sys.stderr)
-        return None
-    return path
-
-
 def _choose_section(sections: list[authoring.HeadingSection]) -> authoring.HeadingSection | None:
     titles = [section.title for section in sections]
     query = _prompt_text("Heading title (exact text; press Enter to cancel)")
@@ -602,24 +671,6 @@ def _choose_variant_group(groups: list[authoring.VariantGroup]) -> authoring.Var
             for group in groups:
                 if group.title == exact.title:
                     return group
-        print("Invalid selection. Try again.", file=sys.stderr)
-
-
-def _prompt_author_mode() -> str | None:
-    print("Select authoring workflow:")
-    print("1. Create new canonical character")
-    print("2. Create character variants from staging drafts")
-    print("3. Create canonical character from schema (.md file)")
-    while True:
-        response = input("Mode selection (1-3, press Enter to cancel): ").strip()
-        if not response:
-            return None
-        if response == "1":
-            return "canonical"
-        if response == "2":
-            return "variants"
-        if response == "3":
-            return "schema"
         print("Invalid selection. Try again.", file=sys.stderr)
 
 
