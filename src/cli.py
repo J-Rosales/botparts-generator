@@ -396,7 +396,11 @@ def _run_author_schema_folder(
     if not schema_dir.exists():
         print(f"Schema folder not found: {schema_dir}", file=sys.stderr)
         return 1
-    schema_paths = sorted(path for path in schema_dir.iterdir() if path.suffix.lower() == ".md")
+    schema_paths = sorted(
+        path
+        for path in schema_dir.iterdir()
+        if path.suffix.lower() == ".md" and path.name != "schema_template.md"
+    )
     if not schema_paths:
         print(f"No schema .md files found under {schema_dir}", file=sys.stderr)
         return 1

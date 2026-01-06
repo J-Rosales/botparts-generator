@@ -15,6 +15,8 @@ embedded_entries:
 # Character concept (staging selection)
 Paste the character concept you want to select here.
 
+> Note: This template is intentionally ignored by `bp author schema --schema-folder`. Clone it before authoring a new schema.
+
 ## Display name
 Provide the display name the CLI should use.
 
