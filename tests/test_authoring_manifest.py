@@ -33,6 +33,27 @@ Liora, the Field Medic
     assert draft.display_name == "Liora, the Field Medic"
 
 
+def test_parse_manifest_allows_all_prose_variant() -> None:
+    text = """---
+version: 1
+prompts:
+  elaborate: 01_elaborate_v1.md
+  extract_fields: 01_specv2_fields_v1.md
+  tone: 01_neutral_v1.md
+  style: 01_neutral_v1.md
+  voice: 01_neutral_v1.md
+prose_variant: all
+---
+# Character concept (staging selection)
+Concept here.
+
+## Display name
+Alpha
+"""
+    draft = authoring.parse_minimal_staging_draft(text)
+    assert draft.manifest.prose_variant == "all"
+
+
 def test_parse_combined_manifest_rejects_duplicate_sections() -> None:
     text = """---
 version: 1

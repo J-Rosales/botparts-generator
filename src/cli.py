@@ -432,24 +432,43 @@ def _run_author_schema_file(
     display_name = draft.display_name.strip()
     characters_root = sources_root / "characters"
     existing_slugs = {path.name for path in authoring.list_character_dirs(sources_root)}
-    slug = authoring.generate_slug(display_name, existing_slugs)
-    try:
-        authoring.validate_slug(slug)
-    except ValueError as exc:
-        print(f"Generated slug '{slug}' is invalid: {exc}", file=sys.stderr)
-        return 1
-    print(f"Generated slug: {slug}")
-    if (characters_root / slug).exists():
-        print(f"Slug '{slug}' already exists. Re-run to generate a new timestamp.", file=sys.stderr)
-        return 1
+    prose_variants = (
+        ["schema-like", "hybrid"]
+        if draft.manifest.prose_variant == "all"
+        else [draft.manifest.prose_variant]
+    )
+    slug_plan: list[tuple[str, str]] = []
+    for prose_variant in prose_variants:
+        slug_source = display_name
+        if len(prose_variants) > 1:
+            slug_source = f"{display_name} {prose_variant}"
+        slug = authoring.generate_slug(slug_source, existing_slugs)
+        try:
+            authoring.validate_slug(slug)
+        except ValueError as exc:
+            print(f"Generated slug '{slug}' is invalid: {exc}", file=sys.stderr)
+            return 1
+        if (characters_root / slug).exists():
+            print(f"Slug '{slug}' already exists. Re-run to generate a new timestamp.", file=sys.stderr)
+            return 1
+        existing_slugs.add(slug)
+        slug_plan.append((prose_variant, slug))
 
-    character_dir: Path | None = None
+    if len(slug_plan) == 1:
+        print(f"Generated slug: {slug_plan[0][1]}")
+    else:
+        for prose_variant, slug in slug_plan:
+            print(f"Generated slug ({prose_variant}): {slug}")
+
+    character_dirs: list[tuple[str, str, Path]] = []
     try:
-        character_dir = authoring.scaffold_character(sources_root, slug, display_name)
-        authoring.write_staging_snapshot(
-            character_dir,
-            authoring.HeadingSection(title="Character concept", level=1, content=draft.concept + "\n"),
-        )
+        for prose_variant, slug in slug_plan:
+            character_dir = authoring.scaffold_character(sources_root, slug, display_name)
+            character_dirs.append((prose_variant, slug, character_dir))
+            authoring.write_staging_snapshot(
+                character_dir,
+                authoring.HeadingSection(title="Character concept", level=1, content=draft.concept + "\n"),
+            )
 
         manifest_prompts = draft.manifest.prompts
         elaborate_prompt = _resolve_manifest_prompt(
@@ -492,67 +511,81 @@ def _run_author_schema_file(
         compiled_elaboration = _compile_prompt(prompt_paths, elaboration_input, "CONCEPT SNIPPET")
         llm_result = _invoke_llm(compiled_elaboration, label="Elaboration")
         elaboration = llm_result.output_text
-        run_id = authoring.build_run_id(slug)
-        run_dir = character_dir / "runs" / run_id
-        authoring.write_run_log(
-            run_dir,
-            prompt_paths,
-            compiled_elaboration,
-            model_info=llm_result.model_info,
-            input_payload=elaboration_input,
-            output_text=elaboration,
-        )
+        for _, slug, character_dir in character_dirs:
+            run_id = authoring.build_run_id(slug)
+            run_dir = character_dir / "runs" / run_id
+            authoring.write_run_log(
+                run_dir,
+                prompt_paths,
+                compiled_elaboration,
+                model_info=llm_result.model_info,
+                input_payload=elaboration_input,
+                output_text=elaboration,
+            )
+
         draft_text = _apply_schema_draft_edits(elaboration, draft.draft_edits)
-        preliminary_path = character_dir / "preliminary_draft.md"
-        preliminary_path.write_text(draft_text, encoding="utf-8")
-        print(f"Review and edit: {preliminary_path.relative_to(Path.cwd()).as_posix()}")
-        authoring.try_open_in_editor(preliminary_path)
+        for _, _, character_dir in character_dirs:
+            (character_dir / "preliminary_draft.md").write_text(draft_text, encoding="utf-8")
+        primary_dir = character_dirs[0][2]
+        primary_path = primary_dir / "preliminary_draft.md"
+        print(f"Review and edit: {primary_path.relative_to(Path.cwd()).as_posix()}")
+        authoring.try_open_in_editor(primary_path)
         input("Press Enter once draft edits are saved...")
-        draft_input = preliminary_path.read_text(encoding="utf-8")
+        draft_input = primary_path.read_text(encoding="utf-8")
+        for _, _, character_dir in character_dirs:
+            (character_dir / "preliminary_draft.md").write_text(draft_input, encoding="utf-8")
 
-        extraction_input = _build_schema_extraction_input(
-            draft_input,
-            draft.extraction_notes,
-            draft.manifest.prose_variant,
-        )
-        compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
-        llm_result = _invoke_llm(compiled_extraction, label="Extraction")
-        extracted = llm_result.output_text
-        run_dir = character_dir / "runs" / authoring.build_run_id(slug)
-        authoring.write_run_log(
-            run_dir,
-            [extract_prompt],
-            compiled_extraction,
-            model_info=llm_result.model_info,
-            input_payload=extraction_input,
-            output_text=extracted,
-        )
-        spec_text, short_desc = authoring.extract_output_sections(extracted)
-        try:
-            spec_payload = authoring.parse_json_payload(spec_text, label="spec_v2")
-        except ValueError as exc:
-            raise ValueError(f"Spec_v2 JSON parsing failed: {exc}") from exc
-        spec_payload["slug"] = slug
-        authoring.validate_spec_v2_llm_output(spec_payload)
-        (character_dir / "canonical" / "spec_v2_fields.md").write_text(
-            authoring.json_dumps(spec_payload),
-            encoding="utf-8",
-        )
-        (character_dir / "canonical" / "shortDescription.md").write_text(short_desc + "\n", encoding="utf-8")
-        _generate_embedded_entries_from_notes(
-            character_dir,
-            prompts_root,
-            draft.manifest.embedded_entries_transform_notes,
-        )
+        for prose_variant, slug, character_dir in character_dirs:
+            extraction_input = _build_schema_extraction_input(
+                draft_input,
+                draft.extraction_notes,
+                prose_variant,
+            )
+            compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
+            llm_result = _invoke_llm(compiled_extraction, label="Extraction")
+            extracted = llm_result.output_text
+            run_dir = character_dir / "runs" / authoring.build_run_id(slug)
+            authoring.write_run_log(
+                run_dir,
+                [extract_prompt],
+                compiled_extraction,
+                model_info=llm_result.model_info,
+                input_payload=extraction_input,
+                output_text=extracted,
+            )
+            spec_text, short_desc = authoring.extract_output_sections(extracted)
+            try:
+                spec_payload = authoring.parse_json_payload(spec_text, label="spec_v2")
+            except ValueError as exc:
+                raise ValueError(f"Spec_v2 JSON parsing failed: {exc}") from exc
+            spec_payload["slug"] = slug
+            authoring.validate_spec_v2_llm_output(spec_payload)
+            (character_dir / "canonical" / "spec_v2_fields.md").write_text(
+                authoring.json_dumps(spec_payload),
+                encoding="utf-8",
+            )
+            (character_dir / "canonical" / "shortDescription.md").write_text(
+                short_desc + "\n",
+                encoding="utf-8",
+            )
+            _generate_embedded_entries_from_notes(
+                character_dir,
+                prompts_root,
+                draft.manifest.embedded_entries_transform_notes,
+            )
 
-        audit = authoring.audit_character(sources_root, slug, strict=False)
-        _print_audit(audit)
-        if not audit.ok:
-            return 1
+            if len(character_dirs) > 1:
+                print(f"Audit for {slug} ({prose_variant})")
+            audit = authoring.audit_character(sources_root, slug, strict=False)
+            _print_audit(audit)
+            if not audit.ok:
+                return 1
     except Exception as exc:
-        if character_dir and character_dir.exists():
-            authoring.delete_character_dirs([character_dir])
-            print(f"Schema workflow failed; cleaned up {character_dir}.", file=sys.stderr)
+        if character_dirs:
+            paths = [path for _, _, path in character_dirs if path.exists()]
+            for path in paths:
+                print(f"Schema workflow failed; cleaned up {path}.", file=sys.stderr)
+            authoring.delete_character_dirs(paths)
         print(f"Schema workflow failed: {exc}", file=sys.stderr)
         return 1
 

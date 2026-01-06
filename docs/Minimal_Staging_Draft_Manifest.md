@@ -16,7 +16,7 @@ prompts:
   tone: 01_neutral_v1.md
   style: 01_neutral_v1.md
   voice: 01_neutral_v1.md
-prose_variant: schema-like # allowed: schema-like | hybrid
+prose_variant: schema-like # allowed: schema-like | hybrid | all
 embedded_entries:
   transform_notes: |
     Always include a field medic kit, a recurring infirmary location, and a mentor tie.
@@ -69,6 +69,7 @@ Controls how `spec_v2` is expressed in prompts and outputs.
 **Allowed values:**
 - `schema-like` — rigid, low-entropy JSON structure, explicit constraints, minimal prose.
 - `hybrid` — lightly structured JSON with embedded natural language and softer constraints.
+- `all` — run both variants and create two canonical characters (one per prose variant).
 
 ### `embedded_entries`
 Controls embedded entry generation.
@@ -110,5 +111,6 @@ Controls embedded entry generation.
 2. **Elaboration runs** on the concept + notes.
 3. **One confirmation** after elaboration when the preliminary draft is ready for manual edits.
 4. `prose_variant` is applied only when inserting the styled draft into `spec_v2` fields.
+   When set to `all`, both `schema-like` and `hybrid` canonical characters are generated.
 5. **Embedded entries** are always generated from `embedded_entries.transform_notes` (fixed count = 2).
 6. **Automatic build** runs immediately after confirmation unless `--no-auto-build` is supplied.
