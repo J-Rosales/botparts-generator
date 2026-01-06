@@ -264,8 +264,10 @@ def _parse_staging_manifest(frontmatter: str) -> StagingManifest:
             raise ValueError(f"Prompt '{key}' must be a non-empty string.")
 
     prose_variant = str(manifest.get("prose_variant", "schema-like")).strip()
-    if prose_variant not in {"schema-like", "hybrid"}:
-        raise ValueError("Frontmatter 'prose_variant' must be 'schema-like' or 'hybrid'.")
+    if prose_variant not in {"schema-like", "hybrid", "all"}:
+        raise ValueError(
+            "Frontmatter 'prose_variant' must be 'schema-like', 'hybrid', or 'all'."
+        )
 
     embedded_entries = manifest.get("embedded_entries", {}) or {}
     if not isinstance(embedded_entries, dict):
