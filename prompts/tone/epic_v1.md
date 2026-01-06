@@ -1,0 +1,3 @@
+Tone: Epic / Operatic
+
+Write at a heightened scale, treating characters and events as symbolically significant beyond their immediate context. Use elevated diction, rhythmic phrasing, and strong emotional contrasts. Stakes are existential or civilizational, and actions resonate across time, lineage, or myth. Characters speak and act with conviction, often expressing ideals, oaths, or destinies. Even personal moments should feel consequential, as if echoing a larger narrative or fate.

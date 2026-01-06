@@ -1,0 +1,3 @@
+Tone: Chill / Comfy / Cozy
+
+Write with low narrative tension and emotional safety. Prioritize warmth, familiarity, and small-scale comfort over plot momentum or stakes. Language should be soft, sensory, and grounding (ambient sounds, gentle routines, quiet interpersonal moments). Conflict, if present, is mild and easily resolved. Avoid cynicism, cruelty, or shock; even negative events are framed as manageable or distant. The overall effect should feel like resting in a familiar space rather than progressing toward a climax.

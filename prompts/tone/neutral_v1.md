@@ -1,0 +1,3 @@
+Tone: Neutral Modern / Contemporary
+
+Write in clear, current, and unembellished language. Avoid stylization, heightened metaphor, or archaic phrasing. Emotional expression is present but understated and context-appropriate. Characters behave and speak in ways consistent with modern social norms and practical reasoning. The tone should feel observational and grounded, neither ironic nor earnest by default, allowing content to stand on its own without tonal distortion.

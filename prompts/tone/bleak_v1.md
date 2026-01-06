@@ -1,0 +1,3 @@
+Tone: Grimdark / Dark Fantasy / Bleak
+
+Write with an assumption that suffering, decay, and moral compromise are structural features of the world, not anomalies. Emphasize harsh consequences, scarcity, and the cost of survival. Language should be weighty, restrained, and unsentimental; avoid heroic framing unless it is undercut or futile. Hope may exist but is fragile, temporary, or self-deluding. Violence, injustice, and loss are treated as normalized realities rather than shocks.
