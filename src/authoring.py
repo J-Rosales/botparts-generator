@@ -24,6 +24,7 @@ class HeadingSection:
     title: str
     level: int
     content: str
+    line_number: int | None = None
 
 
 @dataclass(frozen=True)
@@ -57,61 +58,70 @@ class VariantGroup:
 
 
 @dataclass(frozen=True)
-class EmbeddedEntryDraft:
-    entry_type: str
-    title: str
-    description: str
+class StagingManifest:
+    version: int
+    prompts: dict[str, str]
+    prose_variant: str
+    embedded_entries_transform_notes: str
 
 
 @dataclass(frozen=True)
 class MinimalStagingDraft:
+    manifest: StagingManifest
     concept: str
-    slug: str
     display_name: str
     elaborate_notes: str
     draft_edits: str
     extraction_notes: str
-    embedded_entries_notes: str
-    embedded_entries: list[EmbeddedEntryDraft]
+    audit_notes: str
 
 
-EMBEDDED_ENTRY_TYPE_MAP = {
-    "location": "locations",
-    "item": "items",
-    "knowledge": "knowledge",
-    "ideology": "ideology",
-    "relationship": "relationships",
+REQUIRED_STAGING_HEADERS = {
+    "character concept (staging selection)": 1,
+    "display name": 2,
 }
+OPTIONAL_STAGING_HEADERS = {
+    "elaborate prompt notes": 2,
+    "draft edits (manual)": 2,
+    "extraction prompt notes": 2,
+    "audit notes": 2,
+}
+FRONTMATTER_DELIMITER = "---"
 
 
 def parse_staging_sections(text: str) -> list[HeadingSection]:
+    normalized_text = _normalize_line_endings(text)
     sections: list[HeadingSection] = []
     current_title: str | None = None
     current_level: int | None = None
     current_lines: list[str] = []
+    current_line_number: int | None = None
 
     def flush() -> None:
-        nonlocal current_title, current_level, current_lines
+        nonlocal current_title, current_level, current_lines, current_line_number
         if current_title is None or current_level is None:
             return
         sections.append(
             HeadingSection(
                 title=current_title,
                 level=current_level,
-                content="\n".join(current_lines).strip() + "\n",
+                content=_normalize_body_text("\n".join(current_lines)),
+                line_number=current_line_number,
             )
         )
         current_title = None
         current_level = None
         current_lines = []
+        current_line_number = None
 
-    for line in text.splitlines():
+    for index, line in enumerate(normalized_text.splitlines(), start=1):
         match = HEADING_PATTERN.match(line)
         if match:
             flush()
             current_title = match.group("title").strip()
             current_level = len(match.group("level"))
             current_lines = []
+            current_line_number = index
         else:
             current_lines.append(line)
 
@@ -120,7 +130,10 @@ def parse_staging_sections(text: str) -> list[HeadingSection]:
 
 
 def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
-    sections = parse_staging_sections(text)
+    normalized_text = _normalize_line_endings(text)
+    frontmatter, body = _split_frontmatter(normalized_text)
+    manifest = _parse_staging_manifest(frontmatter)
+    sections = parse_staging_sections(body)
     if not sections:
         raise ValueError("No headings found in staging draft template.")
 
@@ -151,68 +164,312 @@ def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
                 return cleaned
         return ""
 
+    _validate_staging_sections(sections)
     concept_section = required_section("Character concept (staging selection)")
-    slug_section = required_section("Slug")
     display_section = required_section("Display name")
     elaborate_section = find_section("Elaborate prompt notes")
     draft_edits_section = find_section("Draft edits (manual)")
     extraction_section = find_section("Extraction prompt notes")
-    embedded_section = find_section("Embedded entries", "Embedded entries notes")
+    audit_section = find_section("Audit notes")
 
     concept = concept_section.content.strip()
-    slug = first_nonempty_line(slug_section.content)
     display_name = first_nonempty_line(display_section.content)
-    if not slug:
-        raise ValueError("Slug section must include a slug value.")
     if not display_name:
         raise ValueError("Display name section must include a value.")
 
-    embedded_entries: list[EmbeddedEntryDraft] = []
-    embedded_entries_notes = ""
-    if embedded_section is not None:
-        embedded_entries_notes = embedded_section.content.strip()
-        embedded_level = embedded_section.level
-        current_type: str | None = None
-        start_index = sections.index(embedded_section) + 1
-        for section in sections[start_index:]:
-            if section.level <= embedded_level:
-                break
-            if section.level == embedded_level + 1:
-                raw = section.title.split(":", 1)[0].strip().lower()
-                entry_type = EMBEDDED_ENTRY_TYPE_MAP.get(raw)
-                if not entry_type:
-                    raise ValueError(
-                        "Embedded entry type must start with one of: "
-                        + ", ".join(sorted(EMBEDDED_ENTRY_TYPE_MAP.keys()))
-                    )
-                current_type = entry_type
-                continue
-            if section.level == embedded_level + 2:
-                if not current_type:
-                    raise ValueError("Embedded entry item found before type heading.")
-                description = section.content.strip()
-                if not description:
-                    raise ValueError(f"Embedded entry '{section.title}' has no description.")
-                embedded_entries.append(
-                    EmbeddedEntryDraft(
-                        entry_type=current_type,
-                        title=section.title.strip(),
-                        description=description,
-                    )
-                )
-                continue
-            raise ValueError(f"Unsupported embedded entry heading level: {section.level}.")
-
     return MinimalStagingDraft(
+        manifest=manifest,
         concept=concept,
-        slug=slug,
         display_name=display_name,
         elaborate_notes=elaborate_section.content.strip() if elaborate_section else "",
         draft_edits=draft_edits_section.content.strip() if draft_edits_section else "",
         extraction_notes=extraction_section.content.strip() if extraction_section else "",
-        embedded_entries_notes=embedded_entries_notes,
-        embedded_entries=embedded_entries,
+        audit_notes=audit_section.content.strip() if audit_section else "",
     )
+
+
+def _normalize_line_endings(text: str) -> str:
+    return text.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _normalize_body_text(text: str) -> str:
+    normalized = _normalize_line_endings(text)
+    lines = [line.rstrip() for line in normalized.split("\n")]
+    content = "\n".join(lines).strip()
+    if content:
+        return content + "\n"
+    return ""
+
+
+def _split_frontmatter(text: str) -> tuple[str, str]:
+    if not text.startswith(f"{FRONTMATTER_DELIMITER}\n"):
+        raise ValueError("Expected YAML frontmatter at the top of the file.")
+    lines = text.splitlines()
+    try:
+        end_index = lines[1:].index(FRONTMATTER_DELIMITER) + 1
+    except ValueError as exc:
+        raise ValueError("Frontmatter block must be terminated with '---'.") from exc
+    frontmatter = "\n".join(lines[1:end_index])
+    body = "\n".join(lines[end_index + 1 :])
+    if f"\n{FRONTMATTER_DELIMITER}\n" in body:
+        raise ValueError("Only one frontmatter block is allowed in the combined draft.")
+    return frontmatter, body
+
+
+def _parse_staging_manifest(frontmatter: str) -> StagingManifest:
+    lines = _normalize_line_endings(frontmatter).splitlines()
+    manifest: dict[str, Any] = {}
+    index = 0
+    while index < len(lines):
+        raw = lines[index].rstrip()
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            index += 1
+            continue
+        if raw.startswith(" "):
+            raise ValueError(f"Unexpected indentation at frontmatter line {index + 1}.")
+        if ":" not in raw:
+            raise ValueError(f"Invalid frontmatter line {index + 1}: '{raw}'.")
+        key, value = raw.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if value:
+            manifest[key] = _parse_scalar(value)
+            index += 1
+            continue
+        index += 1
+        if key == "prompts":
+            prompts, index = _parse_frontmatter_mapping(lines, index, key, required=True)
+            manifest[key] = prompts
+            continue
+        if key == "embedded_entries":
+            embedded, index = _parse_frontmatter_mapping(lines, index, key, required=False)
+            manifest[key] = embedded
+            continue
+        raise ValueError(f"Unsupported empty mapping for '{key}' in frontmatter.")
+
+    if "version" not in manifest or "prompts" not in manifest:
+        raise ValueError("Frontmatter must include 'version' and 'prompts' keys.")
+    version = manifest["version"]
+    if not isinstance(version, int) or isinstance(version, bool):
+        raise ValueError("Frontmatter 'version' must be an integer.")
+    prompts = manifest["prompts"]
+    if not isinstance(prompts, dict):
+        raise ValueError("Frontmatter 'prompts' must be a mapping.")
+    required_prompts = {"elaborate", "extract_fields", "tone", "style", "voice"}
+    missing = required_prompts - set(prompts.keys())
+    if missing:
+        raise ValueError(f"Frontmatter prompts missing required keys: {', '.join(sorted(missing))}.")
+    for key, value in prompts.items():
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"Prompt '{key}' must be a non-empty string.")
+
+    prose_variant = str(manifest.get("prose_variant", "schema-like")).strip()
+    if prose_variant not in {"schema-like", "hybrid"}:
+        raise ValueError("Frontmatter 'prose_variant' must be 'schema-like' or 'hybrid'.")
+
+    embedded_entries = manifest.get("embedded_entries", {}) or {}
+    if not isinstance(embedded_entries, dict):
+        raise ValueError("Frontmatter 'embedded_entries' must be a mapping.")
+    transform_notes = embedded_entries.get("transform_notes", "")
+    if transform_notes is None:
+        transform_notes = ""
+    if not isinstance(transform_notes, str):
+        raise ValueError("embedded_entries.transform_notes must be a string.")
+
+    return StagingManifest(
+        version=version,
+        prompts={key: str(value).strip() for key, value in prompts.items()},
+        prose_variant=prose_variant,
+        embedded_entries_transform_notes=transform_notes.strip(),
+    )
+
+
+def _parse_frontmatter_mapping(
+    lines: list[str],
+    start_index: int,
+    label: str,
+    required: bool,
+) -> tuple[dict[str, Any], int]:
+    mapping: dict[str, Any] = {}
+    index = start_index
+    while index < len(lines):
+        raw = lines[index].rstrip()
+        if not raw.strip():
+            index += 1
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        if indent < 2:
+            break
+        if indent != 2:
+            raise ValueError(f"Invalid indentation in '{label}' at line {index + 1}.")
+        if ":" not in raw:
+            raise ValueError(f"Invalid '{label}' entry at line {index + 1}: '{raw}'.")
+        key, value = raw.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if value in {"|", "|-"} and label == "embedded_entries" and key == "transform_notes":
+            block, index = _parse_block_scalar(lines, index + 1)
+            mapping[key] = block
+            continue
+        if not value:
+            if label == "embedded_entries" and key == "transform_notes":
+                block, index = _parse_block_scalar(lines, index + 1)
+                mapping[key] = block
+                continue
+            if label == "embedded_entries" and key == "count":
+                nested, index = _parse_frontmatter_nested(lines, index + 1, label)
+                mapping[key] = nested
+                continue
+            raise ValueError(f"Missing value for '{label}.{key}' at line {index + 1}.")
+        mapping[key] = _parse_scalar(value)
+        index += 1
+    if required and not mapping:
+        raise ValueError(f"Frontmatter '{label}' must include at least one entry.")
+    return mapping, index
+
+
+def _parse_block_scalar(lines: list[str], start_index: int) -> tuple[str, int]:
+    buffer: list[str] = []
+    index = start_index
+    while index < len(lines):
+        raw = lines[index]
+        if not raw.strip():
+            buffer.append("")
+            index += 1
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        if indent < 4:
+            break
+        buffer.append(raw[4:])
+        index += 1
+    return "\n".join(buffer).rstrip(), index
+
+
+def _parse_frontmatter_nested(
+    lines: list[str],
+    start_index: int,
+    label: str,
+) -> tuple[dict[str, Any], int]:
+    nested: dict[str, Any] = {}
+    index = start_index
+    while index < len(lines):
+        raw = lines[index].rstrip()
+        if not raw.strip():
+            index += 1
+            continue
+        indent = len(raw) - len(raw.lstrip(" "))
+        if indent < 4:
+            break
+        if indent != 4:
+            raise ValueError(f"Invalid indentation in '{label}' at line {index + 1}.")
+        if ":" not in raw:
+            raise ValueError(f"Invalid '{label}' entry at line {index + 1}: '{raw}'.")
+        key, value = raw.split(":", 1)
+        key = key.strip()
+        value = value.strip()
+        if not value:
+            raise ValueError(f"Missing value for '{label}.{key}' at line {index + 1}.")
+        nested[key] = _parse_scalar(value)
+        index += 1
+    return nested, index
+
+
+def _validate_staging_sections(sections: list[HeadingSection]) -> None:
+    counts: dict[str, int] = {}
+    for section in sections:
+        normalized = section.title.strip().lower()
+        expected_level = REQUIRED_STAGING_HEADERS.get(normalized) or OPTIONAL_STAGING_HEADERS.get(normalized)
+        if expected_level is None:
+            line_info = f" (line {section.line_number})" if section.line_number else ""
+            raise ValueError(f"Unsupported section '{section.title}'{line_info}.")
+        if section.level != expected_level:
+            line_info = f" (line {section.line_number})" if section.line_number else ""
+            raise ValueError(
+                f"Section '{section.title}' must be level {expected_level} heading{line_info}."
+            )
+        counts[normalized] = counts.get(normalized, 0) + 1
+        if counts[normalized] > 1:
+            line_info = f" (line {section.line_number})" if section.line_number else ""
+            raise ValueError(f"Duplicate section '{section.title}'{line_info}.")
+
+
+def generate_slug(display_name: str, existing_slugs: set[str] | None = None) -> str:
+    base = slugify(display_name) or "character"
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    slug = f"{base}-{timestamp}"
+    if existing_slugs:
+        candidate = slug
+        counter = 1
+        while candidate in existing_slugs:
+            candidate = f"{slug}-{counter}"
+            counter += 1
+        slug = candidate
+    return slug
+
+
+def select_embedded_entries(
+    entries_by_type: dict[str, list[EmbeddedEntry]],
+    count: int,
+) -> list[tuple[str, EmbeddedEntry]]:
+    flattened: list[tuple[str, EmbeddedEntry]] = []
+    for entry_type, entries in entries_by_type.items():
+        for entry in entries:
+            flattened.append((entry_type, entry))
+    flattened.sort(key=lambda item: (item[0], item[1].slug))
+    return flattened[:count]
+
+
+def validate_spec_v2_llm_output(payload: dict[str, Any]) -> None:
+    errors: list[str] = []
+    mes_example = payload.get("mes_example")
+    if not isinstance(mes_example, str) or not mes_example.strip():
+        errors.append("mes_example must be a non-empty string.")
+    else:
+        examples = [block.strip() for block in mes_example.strip().split("\n\n") if block.strip()]
+        if len(examples) != 4:
+            errors.append("mes_example must include exactly 4 examples separated by double newlines.")
+        else:
+            for index, block in enumerate(examples, start=1):
+                if not (block.startswith("<START>") and block.endswith("<END>")):
+                    errors.append(f"mes_example item {index} must use <START>...<END> format.")
+            if len({block for block in examples}) != len(examples):
+                errors.append("mes_example entries must be distinct and orthogonal.")
+
+    first_mes = payload.get("first_mes")
+    valid_first_mes = isinstance(first_mes, str) and bool(first_mes.strip())
+    if not valid_first_mes:
+        errors.append("first_mes must be a non-empty string.")
+
+    alternate = payload.get("alternate_greetings")
+    if not isinstance(alternate, list) or not alternate:
+        errors.append("alternate_greetings must be a non-empty list of strings.")
+    else:
+        cleaned_alternate: list[str] = []
+        for index, entry in enumerate(alternate, start=1):
+            if not isinstance(entry, str) or not entry.strip():
+                errors.append(f"alternate_greetings item {index} must be a non-empty string.")
+                continue
+            cleaned_alternate.append(entry.strip())
+        if len(set(cleaned_alternate)) != len(cleaned_alternate):
+            errors.append("alternate_greetings entries must be unique.")
+        if valid_first_mes:
+            _validate_greetings_context([first_mes] + cleaned_alternate, errors)
+
+    if errors:
+        raise ValueError("Spec_v2 validation failed: " + " ".join(errors))
+
+
+def _validate_greetings_context(greetings: list[str], errors: list[str]) -> None:
+    season_pattern = re.compile(r"\b(spring|summer|autumn|fall|winter)\b", re.IGNORECASE)
+    location_pattern = re.compile(r"\b(in|at|on|inside|outside|within|near)\b", re.IGNORECASE)
+    name_pattern = re.compile(r"\b[A-Z][a-z]{2,}\b")
+    for index, greeting in enumerate(greetings, start=1):
+        if not season_pattern.search(greeting):
+            errors.append(f"Greeting {index} must mention a season.")
+        if not location_pattern.search(greeting):
+            errors.append(f"Greeting {index} must mention a location or setting.")
+        if not name_pattern.search(greeting):
+            errors.append(f"Greeting {index} must mention a named person where possible.")
 
 
 def parse_variant_groups(text: str) -> list[VariantGroup]:
@@ -651,6 +908,10 @@ def _parse_json_payload(text: str, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{label} payload must be a JSON object.")
     return payload
+
+
+def parse_json_payload(text: str, label: str) -> dict[str, Any]:
+    return _parse_json_payload(text, label)
 
 
 def _parse_embedded_entry_item(item: Any, entry_type: str | None) -> EmbeddedEntry:
