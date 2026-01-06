@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from src import authoring
+from src import exporter
 
 GENERATOR_VERSION = "0.1.0"
 SITE_ONLY_FIELDS = {
@@ -650,14 +651,19 @@ def build_site_data(
     sources_root = workspace_root / "sources"
     dist_root = workspace_root / "dist"
     output_root = dist_root / "src" / "data"
+    export_root = dist_root / "src" / "export"
 
     if output_root.exists():
         shutil.rmtree(output_root)
+    if export_root.exists():
+        shutil.rmtree(export_root)
 
     _ensure_dir(output_root, created_dirs)
     _ensure_dir(output_root / "characters", created_dirs)
     _ensure_dir(output_root / "fragments", created_dirs)
     (output_root / "fragments" / ".keep").write_text("", encoding="utf-8")
+    _ensure_dir(export_root, created_dirs)
+    _ensure_dir(export_root / "characters", created_dirs)
 
     world_fragments = _build_world_fragments(
         sources_root,
@@ -835,6 +841,16 @@ def build_site_data(
 
         manifest_path = output_root / "characters" / slug / "manifest.json"
         _write_json(manifest_path, manifest_payload)
+
+        if source_dir:
+            exporter.export_character_bundle(
+                workspace_root=workspace_root,
+                source_dir=Path(source_dir),
+                slug=slug,
+                manifest_payload=manifest_payload,
+                warnings=warnings,
+                created_dirs=created_dirs,
+            )
 
         entry_x = dict(site_entry.get("x") or {})
         entry_x.update(site_fields)
