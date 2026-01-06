@@ -26,8 +26,5 @@ Optional notes to guide the elaboration prompt.
 ## Draft edits (manual)
 Notes or edits to apply after elaboration.
 
-## Extraction prompt notes
-Optional notes to guide field extraction.
-
 ## Audit notes
 Optional notes or expected checks after audit.

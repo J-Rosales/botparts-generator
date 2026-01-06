@@ -72,7 +72,6 @@ class MinimalStagingDraft:
     display_name: str
     elaborate_notes: str
     draft_edits: str
-    extraction_notes: str
     audit_notes: str
 
 
@@ -83,7 +82,6 @@ REQUIRED_STAGING_HEADERS = {
 OPTIONAL_STAGING_HEADERS = {
     "elaborate prompt notes": 2,
     "draft edits (manual)": 2,
-    "extraction prompt notes": 2,
     "audit notes": 2,
 }
 FRONTMATTER_DELIMITER = "---"
@@ -169,7 +167,6 @@ def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
     display_section = required_section("Display name")
     elaborate_section = find_section("Elaborate prompt notes")
     draft_edits_section = find_section("Draft edits (manual)")
-    extraction_section = find_section("Extraction prompt notes")
     audit_section = find_section("Audit notes")
 
     concept = concept_section.content.strip()
@@ -183,7 +180,6 @@ def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
         display_name=display_name,
         elaborate_notes=elaborate_section.content.strip() if elaborate_section else "",
         draft_edits=draft_edits_section.content.strip() if draft_edits_section else "",
-        extraction_notes=extraction_section.content.strip() if extraction_section else "",
         audit_notes=audit_section.content.strip() if audit_section else "",
     )
 
