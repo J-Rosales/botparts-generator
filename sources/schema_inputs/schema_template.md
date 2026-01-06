@@ -9,8 +9,7 @@ prompts:
 prose_variant: schema-like # allowed: schema-like | hybrid
 embedded_entries:
   transform_notes: |
-    Always include a field medic kit, a recurring infirmary location, and a mentor tie.
-    Prefer grounded, practical details over mythic artifacts.
+    The system will always make 2 entries per canon embedded item type. Replace with transformation prompt.
 ---
 
 # Character concept (staging selection)
