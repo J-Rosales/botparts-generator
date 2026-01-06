@@ -542,7 +542,6 @@ def _run_author_schema_file(
         for prose_variant, slug, character_dir in character_dirs:
             extraction_input = _build_schema_extraction_input(
                 draft_input,
-                draft.extraction_notes,
                 prose_variant,
             )
             compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
@@ -1151,15 +1150,20 @@ def _apply_schema_draft_edits(elaboration: str, draft_edits: str) -> str:
 
 def _build_schema_extraction_input(
     draft_text: str,
-    extraction_notes: str,
     prose_variant: str,
 ) -> str:
     base = draft_text.rstrip()
     notes: list[str] = []
     if prose_variant:
         notes.append(f"PROSE VARIANT: {prose_variant}")
-    if extraction_notes:
-        notes.append(f"EXTRACTION NOTES:\n{extraction_notes.strip()}")
+    notes.append(
+        "GREETINGS REQUIREMENTS:\n"
+        "- Each greeting should mention a season; if unavailable, use a weekday or time of day.\n"
+        "- Each greeting should mention a location or setting; a situational anchor also works.\n"
+        "- Each greeting should mention a named person; if unavailable, reference who owns the place "
+        "or who the moment reminds the character of.\n"
+        "- If details are missing, make up plausible ones consistent with the setting and time period."
+    )
     if notes:
         return base + "\n\n" + "\n\n".join(notes) + "\n"
     return base + "\n"
