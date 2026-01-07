@@ -14,6 +14,7 @@ EMBEDDED_ENTRY_TYPES = ("locations", "items", "knowledge", "ideology", "relation
 EMBEDDED_ENTRY_FILENAME = re.compile(r"^[a-z0-9][a-z0-9_-]*\.md$")
 EMBEDDED_ENTRY_PLACEHOLDERS = {".keep", ".gitkeep"}
 SCOPE_LAYERS = {"world", "character", "variant"}
+PROSE_VARIANTS = ("schema-like", "hybrid")
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -174,6 +175,7 @@ def _build_spec_v2_card(
     fallback_description: str,
     fallback_tags: list[str],
     variant_slug: str | None = None,
+    prose_variant: str | None = None,
 ) -> dict[str, Any]:
     template = _load_spec_v2_template()
     data = template.get("data")
@@ -204,6 +206,8 @@ def _build_spec_v2_card(
     botparts["slug"] = slug
     if variant_slug:
         botparts["variant"] = variant_slug
+    if prose_variant:
+        botparts["proseVariant"] = prose_variant
     if short_description:
         botparts["shortDescription"] = short_description
     extensions["botparts"] = botparts
@@ -258,6 +262,11 @@ def _write_png_with_embedded_json(
     target_path.write_bytes(output)
 
 
+def _copy_png(source_path: Path, target_path: Path) -> None:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_bytes(source_path.read_bytes())
+
+
 def _find_character_image(image_root: Path, slug: str) -> Path | None:
     if not image_root.exists():
         return None
@@ -293,16 +302,18 @@ def export_character_bundle(
     export_character_root.mkdir(parents=True, exist_ok=True)
     created_dirs.add(export_character_root)
 
-    card_payload = _build_spec_v2_card(
-        spec_fields,
-        slug=slug,
-        short_description=short_description,
-        embedded_book=embedded_book,
-        fallback_name=display_name,
-        fallback_description=manifest_payload.get("description") or "",
-        fallback_tags=manifest_payload.get("tags") or [],
-    )
-    _write_json(export_character_root / "spec_v2.json", card_payload)
+    for prose_variant in PROSE_VARIANTS:
+        card_payload = _build_spec_v2_card(
+            spec_fields,
+            slug=slug,
+            short_description=short_description,
+            embedded_book=embedded_book,
+            fallback_name=display_name,
+            fallback_description=manifest_payload.get("description") or "",
+            fallback_tags=manifest_payload.get("tags") or [],
+            prose_variant=prose_variant,
+        )
+        _write_json(export_character_root / f"spec_v2.{prose_variant}.json", card_payload)
     _write_json(export_character_root / "manifest.json", manifest_payload)
 
     image_root = workspace_root / "sources" / "image_inputs"
@@ -311,7 +322,7 @@ def export_character_bundle(
         warnings.append(f"[{slug}] PNG not found under sources/image_inputs; image export skipped.")
     else:
         png_target = export_character_root / f"{slug}.png"
-        _write_png_with_embedded_json(image_path, png_target, card_payload)
+        _copy_png(image_path, png_target)
 
     variants_root = source_dir / "variants"
     if not variants_root.exists():
@@ -325,24 +336,26 @@ def export_character_bundle(
         except ValueError as exc:
             warnings.append(f"[{slug}] Variant '{variant_dir.name}' export skipped: {exc}")
             continue
-        variant_payload = _build_spec_v2_card(
-            variant_fields,
-            slug=slug,
-            short_description=short_description,
-            embedded_book=embedded_book,
-            fallback_name=display_name,
-            fallback_description=manifest_payload.get("description") or "",
-            fallback_tags=manifest_payload.get("tags") or [],
-            variant_slug=variant_dir.name,
-        )
         variant_root = export_character_root / "variants" / variant_dir.name
         variant_root.mkdir(parents=True, exist_ok=True)
         created_dirs.add(variant_root)
-        _write_json(variant_root / "spec_v2.json", variant_payload)
+        for prose_variant in PROSE_VARIANTS:
+            variant_payload = _build_spec_v2_card(
+                variant_fields,
+                slug=slug,
+                short_description=short_description,
+                embedded_book=embedded_book,
+                fallback_name=display_name,
+                fallback_description=manifest_payload.get("description") or "",
+                fallback_tags=manifest_payload.get("tags") or [],
+                variant_slug=variant_dir.name,
+                prose_variant=prose_variant,
+            )
+            _write_json(variant_root / f"spec_v2.{prose_variant}.json", variant_payload)
         if image_path is None:
             warnings.append(
                 f"[{slug}] PNG not found for variant '{variant_dir.name}'; image export skipped."
             )
         else:
             png_target = variant_root / f"{slug}--{variant_dir.name}.png"
-            _write_png_with_embedded_json(image_path, png_target, variant_payload)
+            _copy_png(image_path, png_target)

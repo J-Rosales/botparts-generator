@@ -23,8 +23,8 @@
 - **Authoring module**: `src/authoring.py` (scaffold, prompt discovery, run logs, output parsing)
 - **Prompt templates**: `prompts/elaborate/01_elaborate_v1.md`, `prompts/extract_fields/01_specv2_fields_v1.md`
 - **Canonical output consumption**: `src/generator.py::_load_authored_manifest` reads `canonical/spec_v2_fields.md` and `canonical/shortDescription.md`
-- **Variant output consumption**: `src/generator.py::_build_variant_fragments` copies
-  `variants/<variant_name>/spec_v2_fields.md` into `dist/src/data/characters/<slug>/fragments/variants/<variant_name>/`
+- **Variant output consumption**: `src/exporter.py::export_character_bundle` applies
+  `variants/<variant_name>/spec_v2_fields.md` to emit `dist/src/export/characters/<slug>/variants/<variant_name>/spec_v2.*.json`
 
 ## Missing pieces found and minimal changes applied
 1. **Missing prompt_compiled.md in run logs**

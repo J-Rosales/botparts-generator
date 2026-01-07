@@ -643,35 +643,25 @@ def build_site_data(
     strict_scopes: bool = False,
 ) -> BuildSummary:
     # This build is intentionally deterministic: identical inputs under sources/
-    # must emit byte-identical dist/src/data outputs. Avoid non-deterministic
+    # must emit byte-identical dist/src/export outputs. Avoid non-deterministic
     # sources (network calls, current time, random) unless explicitly gated.
     warnings: list[str] = []
     created_dirs: set[Path] = set()
+    if strict_scopes:
+        warnings.append("Strict scope mode is ignored; fragment emission is disabled in export builds.")
 
     sources_root = workspace_root / "sources"
     dist_root = workspace_root / "dist"
-    output_root = dist_root / "src" / "data"
+    data_root = dist_root / "src" / "data"
     export_root = dist_root / "src" / "export"
 
-    if output_root.exists():
-        shutil.rmtree(output_root)
+    if data_root.exists():
+        shutil.rmtree(data_root)
     if export_root.exists():
         shutil.rmtree(export_root)
 
-    _ensure_dir(output_root, created_dirs)
-    _ensure_dir(output_root / "characters", created_dirs)
-    _ensure_dir(output_root / "fragments", created_dirs)
-    (output_root / "fragments" / ".keep").write_text("", encoding="utf-8")
     _ensure_dir(export_root, created_dirs)
     _ensure_dir(export_root / "characters", created_dirs)
-
-    world_fragments = _build_world_fragments(
-        sources_root,
-        output_root,
-        created_dirs,
-        warnings,
-        strict_scopes=strict_scopes,
-    )
 
     site_seed_path = sources_root / "site-seed" / "index.json"
     site_seed: dict[str, Any] = {}
@@ -710,6 +700,7 @@ def build_site_data(
     placeholder_manifests: list[dict[str, Any]] = []
     placeholder_count = max(placeholders, 0)
     if placeholder_count:
+        warnings.append("Placeholders requested but export builds only emit authored characters.")
         placeholder_slugs = {f"placeholder-bot-{index:02d}" for index in range(1, placeholder_count + 1)}
         if real_slugs & placeholder_slugs:
             warnings.append("Placeholder slug collision detected; skipping placeholder generation.")
@@ -719,7 +710,6 @@ def build_site_data(
 
     all_manifests = character_sources + placeholder_manifests
 
-    entries: list[dict[str, Any]] = []
     for source_manifest in all_manifests:
         slug = source_manifest.get("slug") or "unknown"
         site_entry = site_entries_by_slug.get(slug, {})
@@ -768,57 +758,24 @@ def build_site_data(
         else:
             site_fields["placeholder"] = False
 
-        content = source_manifest.get("content", {}) if isinstance(source_manifest.get("content"), dict) else {}
-        character_dir = output_root / "characters" / slug
-        _ensure_dir(character_dir, created_dirs)
-        fragments_dir = character_dir / "fragments"
-        fragments = _build_fragment_files(content, fragments_dir, created_dirs)
         source_dir = source_manifest.get("_source_dir")
-        variants_root = Path(source_dir) / "variants" if source_dir else None
-        variants = _build_variant_fragments(
-            variants_root,
-            fragments_dir,
-            created_dirs,
-        )
-        embedded_entries = _build_embedded_entry_fragments(
-            Path(source_dir) if source_dir else None,
-            fragments_dir,
-            created_dirs,
-            warnings,
-            slug,
-        )
-        world_packs = _extract_world_packs(source_manifest, warnings, slug)
-        world_scope_fragments: list[str] = []
-        for pack_name in world_packs:
-            pack_fragments = world_fragments.get(pack_name, {})
-            for scope_paths in pack_fragments.values():
-                world_scope_fragments.extend(scope_paths)
+        variant_slugs: list[str] = []
+        if source_dir:
+            variants_root = Path(source_dir) / "variants"
+            if variants_root.exists():
+                variant_slugs = sorted(
+                    path.name
+                    for path in variants_root.iterdir()
+                    if path.is_dir() and (path / "spec_v2_fields.md").exists()
+                )
 
         manifest_x = dict(source_manifest.get("x") or {})
         manifest_x.update(site_fields)
-        if variants:
-            manifest_x["variants"] = variants
-        if embedded_entries:
-            manifest_x["embeddedEntries"] = embedded_entries
-        if world_packs:
-            manifest_x["worldPacks"] = world_packs
+        if variant_slugs:
+            manifest_x["variantSlugs"] = variant_slugs
+        manifest_x["proseVariants"] = list(exporter.PROSE_VARIANTS)
 
-        scope_layers = {
-            "world": {
-                "packs": world_packs,
-                "fragments": sorted(set(world_scope_fragments)),
-            },
-            "character": {
-                "fragments": sorted(set(fragments.values())),
-                "embeddedEntries": embedded_entries,
-            },
-            "variant": {
-                "fragments": sorted(set(variants.values())),
-            },
-        }
-        manifest_x["scopeLayers"] = scope_layers
-
-        base = {"fragments": fragments}
+        base = {"fragments": {}}
         modules = _map_modules(source_manifest)
         transforms = _map_transforms(source_manifest)
 
@@ -839,9 +796,6 @@ def build_site_data(
             "x": manifest_x,
         }
 
-        manifest_path = output_root / "characters" / slug / "manifest.json"
-        _write_json(manifest_path, manifest_payload)
-
         if source_dir:
             exporter.export_character_bundle(
                 workspace_root=workspace_root,
@@ -852,48 +806,13 @@ def build_site_data(
                 created_dirs=created_dirs,
             )
 
-        entry_x = dict(site_entry.get("x") or {})
-        entry_x.update(site_fields)
-        entry_payload: dict[str, Any] = {
-            "slug": slug,
-            "name": manifest_payload["name"],
-            "description": manifest_payload["description"],
-            "tags": tags,
-            "featured": bool(site_entry.get("featured", False)),
-            "dataPath": f"data/characters/{slug}/manifest.json",
-            "redistributeAllowed": manifest_payload["redistributeAllowed"],
-            "provenance": manifest_payload["provenance"],
-            "x": entry_x,
-        }
-        if site_entry.get("thumbnailPath"):
-            entry_payload["thumbnailPath"] = site_entry["thumbnailPath"]
-        if site_entry.get("version"):
-            entry_payload["version"] = site_entry["version"]
-        if site_entry.get("updatedAt"):
-            entry_payload["updatedAt"] = site_entry["updatedAt"]
-        entries.append(entry_payload)
-
-    entries = sorted(entries, key=lambda entry: entry["slug"])
-
-    index_payload: dict[str, Any] = {
-        "entries": entries,
-    }
-    if site_seed.get("siteTitle"):
-        index_payload["siteTitle"] = site_seed["siteTitle"]
-    if site_seed.get("siteDescription"):
-        index_payload["siteDescription"] = site_seed["siteDescription"]
-    if include_timestamps:
-        index_payload["generatedAt"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
-
-    _write_json(output_root / "index.json", index_payload)
-
     report_path = dist_root / "REPORT.md"
     report_path.write_text(
         _render_report(
             BuildSummary(
                 real_count=len(character_sources),
                 placeholder_count=placeholder_count,
-                total_count=len(entries),
+                total_count=len(character_sources),
                 created_dirs=sorted(str(path.relative_to(dist_root)) for path in created_dirs),
                 warnings=warnings,
             ),
@@ -905,7 +824,7 @@ def build_site_data(
     return BuildSummary(
         real_count=len(character_sources),
         placeholder_count=placeholder_count,
-        total_count=len(entries),
+        total_count=len(character_sources),
         created_dirs=sorted(str(path.relative_to(dist_root)) for path in created_dirs),
         warnings=warnings,
     )
@@ -975,7 +894,7 @@ def _parse_placeholders(value: str | None) -> int:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate Botparts site data.")
+    parser = argparse.ArgumentParser(description="Generate Botparts export packages.")
     parser.add_argument(
         "--placeholders",
         type=_parse_placeholders,
@@ -985,7 +904,7 @@ def main() -> None:
     parser.add_argument(
         "--include-timestamps",
         action="store_true",
-        help="Include timestamps in the report and index.json.",
+        help="Include timestamps in the report.",
     )
     parser.add_argument(
         "--strict-scope",

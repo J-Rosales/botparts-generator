@@ -25,8 +25,8 @@ This approach allows variants to feel richer and more reactive without bloating 
 - Author embedded entries as Markdown files (optionally with YAML frontmatter) under
   `sources/characters/<slug>/fragments/entries/<type>/<entry_slug>.md`.
 - Supported entry types: `locations`, `items`, `knowledge`, `ideology`, `relationships`.
-- Filenames must be slug-like (`[a-z0-9][a-z0-9_-]*.md`) and are copied verbatim into
-  `dist/src/data/characters/<slug>/fragments/entries/<type>/`.
+- Filenames must be slug-like (`[a-z0-9][a-z0-9_-]*.md`) and are ingested into the
+  exported `spec_v2` lorebook output (no standalone fragment emission).
 
 ## 4. Scope Layer System (Narrative Bounding)
 The scope layer system exists to prevent implausible or narratively absurd outcomes during variant generation. It formalizes the idea that not all consequences of a variant justification are equal: some changes are personal and local, while others would imply alterations to shared world canon. By default, variant generation is bounded to character- or variant-level scope.
@@ -38,5 +38,4 @@ This system interacts with all others by acting as a governor. It allows the sta
 **Scope labels + world packs (authoring contract):**
 - Fragment files can declare `scope: world|character|variant` via YAML frontmatter or a JSON sidecar (`<filename>.scope.json`).
 - Shared world canon inputs live under `sources/world/<pack>/fragments/`.
-- World-scoped fragments are emitted to `dist/src/data/fragments/world/<pack>/world/` only when a promotion gate is satisfied.
-- Character- and variant-scoped fragments from world packs are emitted under their respective scope subfolders, keeping output namespaces explicit.
+- Scope labeling remains an authoring-time concept; export packages do not emit world pack fragments as standalone files.

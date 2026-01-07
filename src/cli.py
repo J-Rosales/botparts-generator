@@ -436,33 +436,22 @@ def _run_author_schema_file(
     display_name = draft.display_name.strip()
     characters_root = sources_root / "characters"
     existing_slugs = {path.name for path in authoring.list_character_dirs(sources_root)}
-    prose_variants = (
-        ["schema-like", "hybrid"]
-        if draft.manifest.prose_variant == "all"
-        else [draft.manifest.prose_variant]
+    authoring_prose_variant = (
+        "schema-like" if draft.manifest.prose_variant == "all" else draft.manifest.prose_variant
     )
     slug_plan: list[tuple[str, str]] = []
-    for prose_variant in prose_variants:
-        slug_source = display_name
-        if len(prose_variants) > 1:
-            slug_source = f"{display_name} {prose_variant}"
-        slug = authoring.generate_slug(slug_source, existing_slugs)
-        try:
-            authoring.validate_slug(slug)
-        except ValueError as exc:
-            print(f"Generated slug '{slug}' is invalid: {exc}", file=sys.stderr)
-            return 1
-        if (characters_root / slug).exists():
-            print(f"Slug '{slug}' already exists. Re-run to generate a new timestamp.", file=sys.stderr)
-            return 1
-        existing_slugs.add(slug)
-        slug_plan.append((prose_variant, slug))
-
-    if len(slug_plan) == 1:
-        print(f"Generated slug: {slug_plan[0][1]}")
-    else:
-        for prose_variant, slug in slug_plan:
-            print(f"Generated slug ({prose_variant}): {slug}")
+    slug = authoring.generate_slug(display_name, existing_slugs)
+    try:
+        authoring.validate_slug(slug)
+    except ValueError as exc:
+        print(f"Generated slug '{slug}' is invalid: {exc}", file=sys.stderr)
+        return 1
+    if (characters_root / slug).exists():
+        print(f"Slug '{slug}' already exists. Re-run to generate a new timestamp.", file=sys.stderr)
+        return 1
+    existing_slugs.add(slug)
+    slug_plan.append((authoring_prose_variant, slug))
+    print(f"Generated slug: {slug_plan[0][1]}")
 
     character_dirs: list[tuple[str, str, Path]] = []
     try:

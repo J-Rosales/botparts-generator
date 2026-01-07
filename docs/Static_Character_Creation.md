@@ -1,6 +1,6 @@
 # Static Character Creation (Canonical Inputs)
 
-This repository is the deterministic compiler for Botparts character data. The build reads static, on-disk authoring inputs and emits byte-stable output under `dist/src/data/` with no network or LLM calls in the build path.
+This repository is the deterministic compiler for Botparts character data. The build reads static, on-disk authoring inputs and emits byte-stable export packages under `dist/src/export/` with no network or LLM calls in the build path.
 
 For the system-level mental model, see the Interconnected Systems Overview: `docs/Interconnected_Systems_Overview.md`.
 
@@ -48,7 +48,7 @@ Supported entry types:
 - `ideology`
 - `relationships`
 
-Each file can be simple text (or Markdown with optional YAML frontmatter). The build copies these files verbatim into the deterministic output directory and wires them into the manifest as embedded entries.
+Each file can be simple text (or Markdown with optional YAML frontmatter). The build reads these files as input only and emits their content into the `spec_v2` lorebook output; fragments are no longer emitted as standalone files.
 
 #### How to author these with input strings/numbers (no LLM required)
 
@@ -76,9 +76,10 @@ This keeps the canon grounded and makes later variants more consistent: the same
 
 - Inputs are read only from `sources/` and the vendored schemas; no network calls are performed.
 - Output structure is stable and deterministic, including:
-  - `dist/src/data/index.json`
-  - `dist/src/data/characters/<slug>/manifest.json`
-  - `dist/src/data/characters/<slug>/fragments/.keep` when fragments are empty
+  - `dist/src/export/characters/<slug>/manifest.json`
+  - `dist/src/export/characters/<slug>/spec_v2.schema-like.json`
+  - `dist/src/export/characters/<slug>/spec_v2.hybrid.json`
+  - `dist/src/export/characters/<slug>/<slug>.png` (raw source image when available)
 
 ## Related entry points
 

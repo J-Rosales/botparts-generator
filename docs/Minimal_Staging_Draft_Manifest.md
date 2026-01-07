@@ -69,7 +69,7 @@ Controls how `spec_v2` is expressed in prompts and outputs.
 **Allowed values:**
 - `schema-like` — rigid, low-entropy JSON structure, explicit constraints, minimal prose.
 - `hybrid` — lightly structured JSON with embedded natural language and softer constraints.
-- `all` — run both variants and create two canonical characters (one per prose variant).
+- `all` — run both variants and export both prose styles for a single canonical character.
 
 ### `embedded_entries`
 Controls embedded entry generation.
@@ -111,6 +111,6 @@ Controls embedded entry generation.
 2. **Elaboration runs** on the concept + notes.
 3. **One confirmation** after elaboration when the preliminary draft is ready for manual edits.
 4. `prose_variant` is applied only when inserting the styled draft into `spec_v2` fields.
-   When set to `all`, both `schema-like` and `hybrid` canonical characters are generated.
+   When set to `all`, both `schema-like` and `hybrid` exports are emitted for the same character slug.
 5. **Embedded entries** are always generated from `embedded_entries.transform_notes` (fixed count = 2).
 6. **Automatic build** runs immediately after confirmation unless `--no-auto-build` is supplied.

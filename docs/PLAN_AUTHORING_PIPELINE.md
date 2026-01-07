@@ -4,7 +4,7 @@ This plan defines an **interactive, LLM-assisted authoring tool** and a **determ
 
 > Repo conventions observed:
 > - Deterministic build is implemented in `src/generator.py` (see `build_site_data` + CLI `main()`).
-> - Build outputs in `dist/src/data/` are validated by `tests/test_build_pipeline.py` and include `index.json`, `characters/<slug>/manifest.json`, and `fragments/` placeholders.
+> - Build outputs in `dist/src/export/` are validated by `tests/test_build_pipeline.py` and include `characters/<slug>/manifest.json` plus schema-like/hybrid `spec_v2` exports.
 > - `dist/REPORT.md` is emitted and asserted in `tests/test_build_pipeline.py`.
 > - Placeholder profiles are controlled by `--placeholders` / `BOTPARTS_PLACEHOLDERS` and timestamps by `--include-timestamps` / `BOTPARTS_INCLUDE_TIMESTAMPS`.
 
@@ -42,7 +42,7 @@ This plan defines an **interactive, LLM-assisted authoring tool** and a **determ
   - `--placeholders` / `BOTPARTS_PLACEHOLDERS` remain **build-only** (layout/testing only; never authoring).
   - Authoring must never invent canonical content or fragments; scaffolding may only create empty files/directories.
 - **Timestamps (existing):**
-  - `--include-timestamps` / `BOTPARTS_INCLUDE_TIMESTAMPS` (build only; default off) controls timestamps in `dist/REPORT.md` and `dist/src/data/index.json`.
+  - `--include-timestamps` / `BOTPARTS_INCLUDE_TIMESTAMPS` (build only; default off) controls timestamps in `dist/REPORT.md`.
 
 ---
 
@@ -67,7 +67,7 @@ sources/characters/<slug>/
         model.json
         input_hash.txt
         output.md
-  fragments/                # future authored fragments, not used in build yet
+  fragments/                # authoring inputs (embedded entries, input-only)
   runs/<run_id>/
     prompt_ref.txt
     model.json
@@ -207,11 +207,11 @@ prompt hashes, model/config, input hash, and output text under
 ## 6) Deterministic build integration
 
 - **Build consumes authored inputs** from `sources/characters/<slug>/canonical/` as source fields.
-- **Variants** (`variants/<style>/spec_v2_fields.md`) are included in manifests (if schema supports) and copied to `dist/src/data/characters/<slug>/fragments/` as deterministic static fragments.
-- **Fragments** remain on-disk with placeholders to satisfy the “fragments directory guarantee” validated in `tests/test_build_pipeline.py`.
+- **Variants** (`variants/<style>/spec_v2_fields.md`) are applied during export to emit schema-like and hybrid `spec_v2` JSONs under `dist/src/export/characters/<slug>/variants/<style>/`.
+- **Fragments** remain on-disk as authoring inputs only; export packages do not emit fragment files.
 - **Build must never call LLMs** and must preserve deterministic output (see `tests/test_build_pipeline.py::test_build_reproducibility`).
 
-> TODO: Inspect `src/assemble.py`, `src/emit_spec_v2.py`, and any current source parsing in `src/generator.py` to align how `canonical/` maps to manifest and fragments.
+> TODO: Inspect `src/assemble.py`, `src/emit_spec_v2.py`, and any current source parsing in `src/generator.py` to align how `canonical/` maps to manifest and export outputs.
 
 ---
 
@@ -229,7 +229,7 @@ prompt hashes, model/config, input hash, and output text under
   `fragments/entries/<type>/` exists, enforcing slug-like filenames
   (`[a-z0-9][a-z0-9_-]*.md`) and the per-type entry limit.
 - World packs are **optional**; when present, ensure `sources/world/<pack>/fragments/` exists
-  and that world-scoped fragments only emit when a promotion gate is satisfied
+  and that world-scoped fragments respect promotion gates during authoring review
   (`PROMOTE.md` or `meta.yaml` with `promoteWorld: true`).
 - Scope labels are validated for fragment files via YAML frontmatter (`scope: ...`)
   or a JSON sidecar (`<filename>.scope.json`).
@@ -275,9 +275,9 @@ prompt hashes, model/config, input hash, and output text under
 - Hard fail if missing when authoring requires LLM.
 - Ensure build path does not import LLM modules.
 
-**Phase 4: Variants + fragments manifests**
-- Add deterministic mapping of `variants/` into dist fragments and manifests.
-- Ensure `dist/src/data/fragments/` and per-character `fragments/` directories exist even when empty; manifests may list zero fragments.
+**Phase 4: Variants + export manifests**
+- Add deterministic mapping of `variants/` into export packages (`dist/src/export/characters/<slug>/variants/<style>/spec_v2.*.json`).
+- Ensure export packages emit both schema-like and hybrid `spec_v2` JSONs per character; fragments remain input-only.
 
 **Phase 5: Export tooling (optional)**
 - Add `.exports/` outputs for optional external sharing, gitignored.
@@ -289,7 +289,7 @@ prompt hashes, model/config, input hash, and output text under
 - **Build never calls LLMs.** Keep authoring tool isolated and optional.
 - **Authoring outputs are committed inputs** under `sources/` and are the only LLM-authored artifacts.
 - **Prompt versions are immutable and hashed** for provenance.
-- **Avoid combinatorial explosion**: prefer manifests + fragments rather than full materialization.
+- **Avoid combinatorial explosion**: prefer manifest + dual prose renderings rather than emitting additional fragment trees.
 - **Staging drafts are not canonical**: `staging_snapshot.md` is intake-only, never a build input.
 - **Do not change schemas locally** (vendored under `schemas/`).
 
