@@ -336,6 +336,9 @@ def export_character_bundle(
         except ValueError as exc:
             warnings.append(f"[{slug}] Variant '{variant_dir.name}' export skipped: {exc}")
             continue
+        variant_embedded_book = _build_character_book(variant_dir, warnings, slug, display_name)
+        if variant_embedded_book is None:
+            variant_embedded_book = embedded_book
         variant_root = export_character_root / "variants" / variant_dir.name
         variant_root.mkdir(parents=True, exist_ok=True)
         created_dirs.add(variant_root)
@@ -344,7 +347,7 @@ def export_character_bundle(
                 variant_fields,
                 slug=slug,
                 short_description=short_description,
-                embedded_book=embedded_book,
+                embedded_book=variant_embedded_book,
                 fallback_name=display_name,
                 fallback_description=manifest_payload.get("description") or "",
                 fallback_tags=manifest_payload.get("tags") or [],

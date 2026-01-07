@@ -112,12 +112,14 @@ sources/characters/<slug>/
 6. **Manual edit pause**
    - Provide instruction to edit `preliminary_draft.md` before proceeding.
    - CLI pauses and resumes after user confirmation.
-7. **Run LLM “field extraction”**
+7. **Generate embedded entries + idiosyncrasy module**
+   - Generate embedded entries from transform notes (fixed count).
+   - Generate schema-like idiosyncrasy blocks for `system_prompt` and `post_history_instructions`.
+8. **Run LLM “field extraction”**
    - Write `canonical/spec_v2_fields.md` and `canonical/shortDescription.md`.
    - Persist run logs under `runs/<run_id>/`.
-8. **Author embedded entries**
-   - Choose one mode: Automatically, From Input Prompt, or Skip.
-   - Persist embedded entry prompt/response logs under `runs/<run_id>/`.
+9. **Variant notes (schema flow only)**
+   - If the schema includes variant notes, generate variant deltas after canonical extraction.
 
 ### Create variant flow (from staging drafts)
 1. **Select character slug**
@@ -168,6 +170,8 @@ prompts/
     01_elaborate_v1.md
   extract_fields/
     01_specv2_fields_v1.md
+  idiosyncrasy_module/
+    01_idiosyncrasy_module_v1.md
   rewrite_variants/
     01_compact_v1.md
   tone/

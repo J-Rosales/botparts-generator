@@ -13,6 +13,8 @@ version: 1
 prompts:
   elaborate: 01_elaborate_v1.md
   extract_fields: 01_specv2_fields_v1.md
+  idiosyncrasy_module: 01_idiosyncrasy_module_v1.md
+  rewrite_variants: 01_compact_v1.md
   tone: 01_neutral_v1.md
   style: 01_neutral_v1.md
   voice: 01_neutral_v1.md
@@ -37,11 +39,13 @@ Emphasize gentle humor, practical survival skills, and a habit of journaling.
 ## Draft edits (manual)
 Keep the tone warm and grounded; avoid high-fantasy magic.
 
-## Extraction prompt notes
-Ensure medical expertise and travel routine appear in the structured fields.
-
 ## Audit notes
 Check that shortDescription is one sentence and that fragments are slugged.
+
+## Variant notes
+### Variant Group
+#### Calm Tone
+She trusts others more quickly and avoids grim humor.
 ```
 
 ---
@@ -56,6 +60,7 @@ Global prompt variant selection. These are **names** that map to prompt variants
 
 - `elaborate`
 - `extract_fields`
+- `idiosyncrasy_module`
 - `rewrite_variants`
 - `tone`
 - `style`
@@ -88,8 +93,8 @@ Controls embedded entry generation.
 ### Optional sections
 - `## Elaborate prompt notes`
 - `## Draft edits (manual)`
-- `## Extraction prompt notes`
 - `## Audit notes`
+- `## Variant notes`
 
 ### Removed fields
 - `## Slug` has been removed. Slugs are now automatically derived from the display name and appended with a short timestamp-based code for uniqueness.
@@ -112,5 +117,8 @@ Controls embedded entry generation.
 3. **One confirmation** after elaboration when the preliminary draft is ready for manual edits.
 4. `prose_variant` is applied only when inserting the styled draft into `spec_v2` fields.
    When set to `all`, both `schema-like` and `hybrid` exports are emitted for the same character slug.
-5. **Embedded entries** are always generated from `embedded_entries.transform_notes` (fixed count = 2).
-6. **Automatic build** runs immediately after confirmation unless `--no-auto-build` is supplied.
+5. **Embedded entries** are generated from `embedded_entries.transform_notes` (fixed count = 2).
+6. **Idiosyncrasy module** is generated once per character and written into
+   `system_prompt` + `post_history_instructions`.
+7. **Variant notes** (if present) create additional variant deltas after canonical extraction.
+8. **Automatic build** runs immediately after confirmation unless `--no-auto-build` is supplied.

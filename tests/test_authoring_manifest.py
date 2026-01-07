@@ -54,6 +54,31 @@ Alpha
     assert draft.manifest.prose_variant == "all"
 
 
+def test_parse_manifest_captures_variant_notes() -> None:
+    text = """---
+version: 1
+prompts:
+  elaborate: 01_elaborate_v1.md
+  extract_fields: 01_specv2_fields_v1.md
+  tone: 01_neutral_v1.md
+  style: 01_neutral_v1.md
+  voice: 01_neutral_v1.md
+---
+# Character concept (staging selection)
+Concept here.
+
+## Display name
+Alpha
+
+## Variant notes
+### Variant Group
+#### Calm Tone
+Stay steady.
+"""
+    draft = authoring.parse_minimal_staging_draft(text)
+    assert "Calm Tone" in draft.variant_notes
+
+
 def test_parse_combined_manifest_rejects_duplicate_sections() -> None:
     text = """---
 version: 1

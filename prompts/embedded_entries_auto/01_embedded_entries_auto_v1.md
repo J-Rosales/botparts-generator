@@ -12,4 +12,5 @@ Rules:
 - If you must choose fewer types to stay within the target, do so.
 - If you have no ideas for a type, return an empty list for that type.
 - Keep entries grounded, concrete, and reusable.
+- If NOTES or variant context are provided, ensure the entries reflect those constraints.
 - Output JSON only (no markdown, no commentary).

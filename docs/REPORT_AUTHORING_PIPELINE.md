@@ -13,6 +13,8 @@
 - **Variant authoring**: variant runs reuse `authoring.write_run_log()` under
   `sources/characters/<slug>/variants/<variant_name>/runs/<run_id>/` to capture prompt hashes,
   model/config, input hash, and output text.
+- **Idiosyncrasy module**: schema authoring generates a schema-like block for
+  `system_prompt` and `post_history_instructions` before extraction.
 - **Elaboration output**: `_run_author` writes elaboration output to `sources/characters/<slug>/preliminary_draft.md` (overwrite).
 - **Extraction output**: `_run_author` reads `preliminary_draft.md`, extracts sections, and writes:
   - `sources/characters/<slug>/canonical/spec_v2_fields.md`
@@ -21,7 +23,8 @@
 ## Files/entrypoints involved
 - **CLI**: `src/cli.py` (`bp author`, `bp audit`, `bp build`)
 - **Authoring module**: `src/authoring.py` (scaffold, prompt discovery, run logs, output parsing)
-- **Prompt templates**: `prompts/elaborate/01_elaborate_v1.md`, `prompts/extract_fields/01_specv2_fields_v1.md`
+- **Prompt templates**: `prompts/elaborate/01_elaborate_v1.md`, `prompts/extract_fields/01_specv2_fields_v1.md`,
+  `prompts/idiosyncrasy_module/01_idiosyncrasy_module_v1.md`
 - **Canonical output consumption**: `src/generator.py::_load_authored_manifest` reads `canonical/spec_v2_fields.md` and `canonical/shortDescription.md`
 - **Variant output consumption**: `src/exporter.py::export_character_bundle` applies
   `variants/<variant_name>/spec_v2_fields.md` to emit `dist/src/export/characters/<slug>/variants/<variant_name>/spec_v2.*.json`
