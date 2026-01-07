@@ -43,7 +43,7 @@ This report maps the requested behavior changes to the current `bp author → bp
 ### 6) Add “prose variant” for spec_v2 (schema-like vs hybrid)
 **Status:** **Implemented**
 - `prose_variant` is accepted in the manifest and applied only at the spec_v2 insertion step.
-  `all` runs both variants to create two canonical characters.
+  `all` runs both variants to export two prose styles for a single canonical character.
 
 ---
 

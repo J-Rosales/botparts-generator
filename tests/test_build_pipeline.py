@@ -12,7 +12,7 @@ from tests.conftest import hash_directory, iter_json_files, load_json
 
 @pytest.fixture()
 def output_root(built_workspace: Path) -> Path:
-    return built_workspace / "dist" / "src" / "data"
+    return built_workspace / "dist" / "src" / "export"
 
 
 def _load_schema(schema_name: str, repo_root: Path) -> dict:
@@ -34,7 +34,7 @@ def test_build_reproducibility(
 ) -> None:
     workspace = tmp_path / "workspace"
     shutil.copytree(repo_root, workspace, ignore=shutil.ignore_patterns(".git", "__pycache__", ".pytest_cache"))
-    output_root = workspace / "dist" / "src" / "data"
+    output_root = workspace / "dist" / "src" / "export"
 
     from tests.conftest import _fallback_build, _run_subprocess  # local import to avoid pytest collection issues
 
@@ -42,7 +42,7 @@ def test_build_reproducibility(
         _run_subprocess(build_command, workspace)
     else:
         _fallback_build(workspace)
-    assert output_root.exists(), "dist/src/data should be produced"
+    assert output_root.exists(), "dist/src/export should be produced"
     first_hash = hash_directory(output_root)
 
     shutil.rmtree(output_root)
@@ -57,13 +57,11 @@ def test_build_reproducibility(
 
 def test_schema_compliance(output_root: Path, repo_root: Path) -> None:
     json_files = list(iter_json_files(output_root))
-    assert json_files, "Expected JSON outputs in dist/src/data"
+    assert json_files, "Expected JSON outputs in dist/src/export"
 
     for json_path in json_files:
-        if json_path.name == "index.json":
-            index_data = load_json(json_path)
-            if not index_data.get("entries"):
-                continue
+        if json_path.name != "manifest.json":
+            continue
         schema = _schema_for_path(json_path, repo_root)
         validator = Draft202012Validator(schema)
         errors = sorted(validator.iter_errors(load_json(json_path)), key=lambda err: err.path)
@@ -71,29 +69,16 @@ def test_schema_compliance(output_root: Path, repo_root: Path) -> None:
 
 
 def test_contract_completeness(output_root: Path) -> None:
-    index_path = output_root / "index.json"
-    assert index_path.exists(), "index.json must exist"
-
     characters_root = output_root / "characters"
     assert characters_root.exists(), "characters directory must exist"
-
-    fragments_root = output_root / "fragments"
-    assert fragments_root.exists(), "fragments directory must exist"
-    assert any(fragments_root.iterdir()), "fragments directory must include placeholder files"
 
     for character_dir in characters_root.iterdir():
         if not character_dir.is_dir():
             continue
         manifest_path = character_dir / "manifest.json"
         assert manifest_path.exists(), f"Missing manifest.json for {character_dir.name}"
-
-        fragments_dir = character_dir / "fragments"
-        assert fragments_dir.exists(), f"Missing fragments/ for {character_dir.name}"
-        entries = [path for path in fragments_dir.iterdir() if path.is_file()]
-        assert entries, f"fragments/ must contain files or a placeholder for {character_dir.name}"
-        assert any(path.name in {".keep", ".gitkeep"} or path.stat().st_size > 0 for path in entries), (
-            f"fragments/ must be non-empty or include a placeholder for {character_dir.name}"
-        )
+        assert (character_dir / "spec_v2.schema-like.json").exists()
+        assert (character_dir / "spec_v2.hybrid.json").exists()
 
 
 def test_no_site_coupling(repo_root: Path) -> None:
@@ -122,16 +107,9 @@ def test_no_site_coupling(repo_root: Path) -> None:
 
 
 def test_site_only_fields_present(output_root: Path) -> None:
-    index_data = load_json(output_root / "index.json")
-    assert index_data["entries"], "Expected at least one entry for site-only field checks"
-    entry = index_data["entries"][0]
-    entry_x = entry.get("x", {})
-    assert entry_x.get("shortDescription") == ""
-    assert entry_x.get("spoilerTags") == []
-    assert entry_x.get("aiTokens") is None
-    assert entry_x.get("uploadDate") != ""
-
-    manifest_path = output_root / "characters" / entry["slug"] / "manifest.json"
+    characters_root = output_root / "characters"
+    slug = next(path.name for path in characters_root.iterdir() if path.is_dir())
+    manifest_path = output_root / "characters" / slug / "manifest.json"
     manifest = load_json(manifest_path)
     manifest_x = manifest.get("x", {})
     assert manifest_x.get("shortDescription") == ""

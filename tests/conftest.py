@@ -42,6 +42,28 @@ def _copy_repo_for_build(tmp_path: Path, repo_root: Path) -> Path:
     return workspace
 
 
+def seed_character_sources(workspace: Path, slug: str = "example-bot") -> Path:
+    character_dir = workspace / "sources" / "characters" / slug
+    canonical_dir = character_dir / "canonical"
+    canonical_dir.mkdir(parents=True, exist_ok=True)
+    (character_dir / "variants").mkdir(parents=True, exist_ok=True)
+    fragments_dir = character_dir / "fragments"
+    fragments_dir.mkdir(parents=True, exist_ok=True)
+    (fragments_dir / ".keep").write_text("", encoding="utf-8")
+    spec_payload = {
+        "slug": slug,
+        "name": "Example Bot",
+        "description": "An example character for generator tests.",
+        "tags": ["friendly"],
+    }
+    (canonical_dir / "spec_v2_fields.md").write_text(
+        json.dumps(spec_payload, indent=2),
+        encoding="utf-8",
+    )
+    (canonical_dir / "shortDescription.md").write_text("Example short description.\n", encoding="utf-8")
+    return character_dir
+
+
 def _run_subprocess(command: str, cwd: Path) -> None:
     args = shlex.split(command)
     subprocess.run(args, check=True, cwd=cwd)
@@ -58,6 +80,7 @@ def _fallback_build(workspace: Path) -> None:
 @pytest.fixture()
 def built_workspace(tmp_path: Path, repo_root: Path, build_command: str | None) -> Path:
     workspace = _copy_repo_for_build(tmp_path, repo_root)
+    seed_character_sources(workspace)
     if build_command:
         _run_subprocess(build_command, workspace)
     else:

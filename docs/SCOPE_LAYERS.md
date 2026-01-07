@@ -36,19 +36,15 @@ sources/
         atlas.md.scope.json
 ```
 
-- `fragments/` is required for a pack to emit content.
-- World-scoped fragments **require promotion** via `PROMOTE.md` or `meta.yaml` with
-  `promoteWorld: true`.
-- Missing `sources/world/` is non-fatal unless strict scope mode is enabled.
+- `fragments/` is required for a pack to be considered during authoring.
+- World-scoped fragments still **require promotion** via `PROMOTE.md` or `meta.yaml` with
+  `promoteWorld: true` when authoring tools inspect them.
+- Missing `sources/world/` is non-fatal; strict scope mode is now advisory only.
 
 ## Output routing
 
-- World pack fragments are emitted under:
-  `dist/src/data/fragments/world/<pack>/<scope>/filename`
-- Character fragments remain under each character’s
-  `dist/src/data/characters/<slug>/fragments/`.
-- Variant fragments remain under
-  `dist/src/data/characters/<slug>/fragments/variants/`.
+- Export packages no longer emit standalone fragment files.
+- Scope labels remain authoring-time metadata used for validation and review.
 
 ## Strict scope mode
 
@@ -57,4 +53,4 @@ Enable strict mode with:
 - CLI: `bp build --strict-scope`
 - Env: `BOTPARTS_SCOPE_STRICT=1`
 
-Strict mode turns missing world packs or promotion gate violations into errors.
+Strict mode is retained for backward compatibility but currently emits a warning instead of failing a build.
