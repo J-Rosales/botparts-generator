@@ -73,6 +73,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     author_schema.add_argument("--tone-category", default="tone")
     author_schema.add_argument("--voice-category", default="voice")
     author_schema.add_argument("--style-category", default="style")
+    author_schema.add_argument("--idiosyncrasy-category", default="idiosyncrasy_module")
+    author_schema.add_argument("--variant-category", default="rewrite_variants")
     author_schema.add_argument(
         "--no-auto-build",
         action="store_true",
@@ -88,6 +90,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     author_schema_folder.add_argument("--tone-category", default="tone")
     author_schema_folder.add_argument("--voice-category", default="voice")
     author_schema_folder.add_argument("--style-category", default="style")
+    author_schema_folder.add_argument("--idiosyncrasy-category", default="idiosyncrasy_module")
+    author_schema_folder.add_argument("--variant-category", default="rewrite_variants")
     author_schema_folder.add_argument(
         "--no-auto-build",
         action="store_true",
@@ -320,59 +324,17 @@ def _run_author_variants(
         return 1
 
     prompt_path = _select_prompt(prompts_root, "rewrite_variants")
-    canonical_text = canonical_path.read_text(encoding="utf-8")
-    planned_variants: list[tuple[str, str, str]] = []
-    seen_slugs: set[str] = set()
-    for variant in group.variants:
-        variant_slug = authoring.slugify(variant.title)
-        try:
-            authoring.validate_slug(variant_slug)
-        except ValueError as exc:
-            print(f"Invalid variant slug for '{variant.title}': {exc}", file=sys.stderr)
-            return 1
-        if variant_slug in seen_slugs:
-            print(f"Duplicate variant slug '{variant_slug}' in staging drafts.", file=sys.stderr)
-            return 1
-        seen_slugs.add(variant_slug)
-        description = variant.description.strip()
-        if not description:
-            print(f"Missing variant description for '{variant.title}'.", file=sys.stderr)
-            return 1
-        planned_variants.append((variant.title, variant_slug, description))
+    try:
+        planned_variants = _plan_variants(group.variants)
+    except ValueError as exc:
+        print(f"Variant planning failed: {exc}", file=sys.stderr)
+        return 1
 
-    for _, variant_slug, description in planned_variants:
-        variant_dir = character_dir / "variants" / variant_slug
-        variant_dir.mkdir(parents=True, exist_ok=True)
-        spec_path = variant_dir / "spec_v2_fields.md"
-
-        input_payload = _format_variant_prompt_payload(canonical_text, description)
-        compiled_prompt = _compile_variant_prompt([prompt_path], canonical_text, description)
-        llm_result = _invoke_llm(compiled_prompt, label="Variant rewrite")
-        spec_path.write_text(llm_result.output_text.rstrip() + "\n", encoding="utf-8")
-        run_dir = variant_dir / "runs" / authoring.build_run_id(variant_slug)
-        authoring.write_run_log(
-            run_dir,
-            [prompt_path],
-            compiled_prompt,
-            model_info=llm_result.model_info,
-            input_payload=input_payload,
-            output_text=llm_result.output_text,
-        )
-
-        variant_rel = spec_path.relative_to(Path.cwd())
-        print(f"Edit variant draft: {variant_rel.as_posix()}")
-        authoring.try_open_in_editor(spec_path)
-        input("Press enter once draft edits are saved...")
-        delta_fields = authoring.load_spec_fields(spec_path)
-        if not isinstance(delta_fields, dict):
-            print(f"Variant delta for '{variant_slug}' must be a JSON object.", file=sys.stderr)
-            return 1
-        try:
-            authoring.apply_variant_delta(canonical_path, spec_path)
-        except ValueError as exc:
-            print(f"Variant delta validation failed for '{variant_slug}': {exc}", file=sys.stderr)
-            return 1
-        _print_variant_fragment_summary(delta_fields, variant_slug)
+    try:
+        _apply_variant_edits(character_dir, canonical_path, prompt_path, planned_variants)
+    except ValueError as exc:
+        print(f"Variant delta validation failed: {exc}", file=sys.stderr)
+        return 1
 
     print("Variant authoring complete. Run `bp build` to generate dist outputs.")
     return 0
@@ -528,6 +490,52 @@ def _run_author_schema_file(
         for _, _, character_dir in character_dirs:
             (character_dir / "preliminary_draft.md").write_text(draft_input, encoding="utf-8")
 
+        refreshed_draft = authoring.parse_minimal_staging_draft(
+            schema_path.read_text(encoding="utf-8")
+        )
+        variant_notes = refreshed_draft.variant_notes
+        variant_drafts = _parse_variant_notes(variant_notes)
+
+        for _, _, character_dir in character_dirs:
+            _generate_embedded_entries_from_notes(
+                character_dir,
+                prompts_root,
+                draft.manifest.embedded_entries_transform_notes,
+            )
+        embedded_entries_summary = _summarize_embedded_entries(
+            character_dirs[0][2] / "fragments" / "entries"
+        )
+
+        idiosyncrasy_prompt = _resolve_optional_manifest_prompt(
+            prompts_root,
+            args.idiosyncrasy_category,
+            manifest_prompts,
+            "idiosyncrasy_module",
+        )
+        idiosyncrasy_input = _format_idiosyncrasy_payload(
+            draft_input,
+            embedded_entries_summary,
+            variant_notes,
+        )
+        compiled_idiosyncrasy = _compile_prompt(
+            [idiosyncrasy_prompt],
+            idiosyncrasy_input,
+            "IDIOSYNCRASY INPUT",
+        )
+        llm_result = _invoke_llm(compiled_idiosyncrasy, label="Idiosyncrasy module")
+        run_dir = character_dirs[0][2] / "runs" / authoring.build_run_id(character_dirs[0][1])
+        authoring.write_run_log(
+            run_dir,
+            [idiosyncrasy_prompt],
+            compiled_idiosyncrasy,
+            model_info=llm_result.model_info,
+            input_payload=idiosyncrasy_input,
+            output_text=llm_result.output_text,
+        )
+        system_prompt_module, post_history_module = _parse_idiosyncrasy_module(
+            llm_result.output_text
+        )
+
         for prose_variant, slug, character_dir in character_dirs:
             extraction_input = _build_schema_extraction_input(
                 draft_input,
@@ -551,6 +559,10 @@ def _run_author_schema_file(
             except ValueError as exc:
                 raise ValueError(f"Spec_v2 JSON parsing failed: {exc}") from exc
             spec_payload["slug"] = slug
+            if system_prompt_module:
+                spec_payload["system_prompt"] = system_prompt_module
+            if post_history_module:
+                spec_payload["post_history_instructions"] = post_history_module
             authoring.validate_spec_v2_llm_output(spec_payload)
             (character_dir / "canonical" / "spec_v2_fields.md").write_text(
                 authoring.json_dumps(spec_payload),
@@ -560,11 +572,33 @@ def _run_author_schema_file(
                 short_desc + "\n",
                 encoding="utf-8",
             )
-            _generate_embedded_entries_from_notes(
-                character_dir,
-                prompts_root,
-                draft.manifest.embedded_entries_transform_notes,
-            )
+
+            if variant_drafts:
+                variant_prompt = _resolve_optional_manifest_prompt(
+                    prompts_root,
+                    args.variant_category,
+                    manifest_prompts,
+                    "rewrite_variants",
+                )
+                try:
+                    planned_variants = _plan_variants(variant_drafts)
+                except ValueError as exc:
+                    raise ValueError(f"Variant planning failed: {exc}") from exc
+                applied_variants = _apply_variant_edits(
+                    character_dir,
+                    character_dir / "canonical" / "spec_v2_fields.md",
+                    variant_prompt,
+                    planned_variants,
+                )
+                for variant_slug, description in applied_variants:
+                    variant_dir = character_dir / "variants" / variant_slug
+                    _generate_embedded_entries_from_notes(
+                        variant_dir,
+                        prompts_root,
+                        draft.manifest.embedded_entries_transform_notes,
+                        variant_context=description,
+                        embedded_entries=embedded_entries_summary,
+                    )
 
             if len(character_dirs) > 1:
                 print(f"Audit for {slug} ({prose_variant})")
@@ -839,6 +873,137 @@ def _format_variant_prompt_payload(canonical_text: str, variant_description: str
             variant_description.strip(),
         ]
     ).strip() + "\n"
+
+
+def _resolve_optional_manifest_prompt(
+    prompts_root: Path,
+    category: str,
+    manifest_prompts: dict[str, str],
+    prompt_key: str,
+) -> Path:
+    template_name = manifest_prompts.get(prompt_key, "").strip()
+    if template_name:
+        return _resolve_manifest_prompt(prompts_root, category, template_name, f"prompts.{prompt_key}")
+    return _select_prompt(prompts_root, category)
+
+
+def _parse_variant_notes(variant_notes: str) -> list[authoring.VariantDraft]:
+    if not variant_notes.strip():
+        return []
+    groups = authoring.parse_variant_groups(variant_notes)
+    variants: list[authoring.VariantDraft] = []
+    for group in groups:
+        variants.extend(group.variants)
+    return variants
+
+
+def _plan_variants(
+    variants: list[authoring.VariantDraft],
+) -> list[tuple[str, str, str]]:
+    planned: list[tuple[str, str, str]] = []
+    seen_slugs: set[str] = set()
+    for variant in variants:
+        variant_slug = authoring.slugify(variant.title)
+        authoring.validate_slug(variant_slug)
+        if variant_slug in seen_slugs:
+            raise ValueError(f"Duplicate variant slug '{variant_slug}' in variant notes.")
+        seen_slugs.add(variant_slug)
+        description = variant.description.strip()
+        if not description:
+            raise ValueError(f"Missing variant description for '{variant.title}'.")
+        planned.append((variant.title, variant_slug, description))
+    return planned
+
+
+def _apply_variant_edits(
+    character_dir: Path,
+    canonical_path: Path,
+    prompt_path: Path,
+    planned_variants: list[tuple[str, str, str]],
+) -> list[tuple[str, str]]:
+    canonical_text = canonical_path.read_text(encoding="utf-8")
+    applied: list[tuple[str, str]] = []
+    for _, variant_slug, description in planned_variants:
+        variant_dir = character_dir / "variants" / variant_slug
+        variant_dir.mkdir(parents=True, exist_ok=True)
+        spec_path = variant_dir / "spec_v2_fields.md"
+
+        input_payload = _format_variant_prompt_payload(canonical_text, description)
+        compiled_prompt = _compile_variant_prompt([prompt_path], canonical_text, description)
+        llm_result = _invoke_llm(compiled_prompt, label=f"Variant rewrite ({variant_slug})")
+        spec_path.write_text(llm_result.output_text.rstrip() + "\n", encoding="utf-8")
+        run_dir = variant_dir / "runs" / authoring.build_run_id(variant_slug)
+        authoring.write_run_log(
+            run_dir,
+            [prompt_path],
+            compiled_prompt,
+            model_info=llm_result.model_info,
+            input_payload=input_payload,
+            output_text=llm_result.output_text,
+        )
+
+        variant_rel = spec_path.relative_to(Path.cwd())
+        print(f"Edit variant draft: {variant_rel.as_posix()}")
+        authoring.try_open_in_editor(spec_path)
+        input("Press enter once draft edits are saved...")
+        delta_fields = authoring.load_spec_fields(spec_path)
+        if not isinstance(delta_fields, dict):
+            raise ValueError(f"Variant delta for '{variant_slug}' must be a JSON object.")
+        authoring.apply_variant_delta(canonical_path, spec_path)
+        _print_variant_fragment_summary(delta_fields, variant_slug)
+        applied.append((variant_slug, description))
+    return applied
+
+
+def _format_idiosyncrasy_payload(
+    draft_text: str,
+    embedded_entries: str,
+    variant_notes: str,
+) -> str:
+    sections = ["DRAFT:\n" + draft_text.strip()]
+    if embedded_entries:
+        sections.append("EMBEDDED ENTRIES:\n" + embedded_entries)
+    if variant_notes.strip():
+        sections.append("VARIANT NOTES:\n" + variant_notes.strip())
+    return "\n\n".join(sections).strip() + "\n"
+
+
+def _parse_idiosyncrasy_module(output_text: str) -> tuple[str, str]:
+    payload = authoring.parse_json_payload(output_text, label="idiosyncrasy module")
+    system_prompt = str(payload.get("system_prompt") or "").strip()
+    post_history = str(payload.get("post_history_instructions") or "").strip()
+    return system_prompt, post_history
+
+
+def _strip_frontmatter(text: str) -> str:
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return text.strip()
+    for idx in range(1, len(lines)):
+        if lines[idx].strip() == "---":
+            body = "\n".join(lines[idx + 1 :]).strip()
+            return body
+    return text.strip()
+
+
+def _summarize_embedded_entries(entries_root: Path) -> str:
+    summaries: list[str] = []
+    if not entries_root.exists() or not entries_root.is_dir():
+        return ""
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        type_dir = entries_root / entry_type
+        if not type_dir.exists() or not type_dir.is_dir():
+            continue
+        for path in sorted(type_dir.iterdir(), key=lambda item: item.name):
+            if path.is_dir():
+                continue
+            if path.name in {".keep", ".gitkeep"}:
+                continue
+            body = _strip_frontmatter(path.read_text(encoding="utf-8"))
+            if not body:
+                continue
+            summaries.append(f"- {entry_type}/{path.stem}: {body}")
+    return "\n".join(summaries).strip()
 
 
 def _invoke_llm(compiled_prompt: str, label: str = "LLM request") -> llm_client.LLMResult:
@@ -1159,17 +1324,23 @@ def _build_schema_extraction_input(
 
 
 def _generate_embedded_entries_from_notes(
-    character_dir: Path,
+    target_dir: Path,
     prompts_root: Path,
     notes: str,
+    variant_context: str | None = None,
+    embedded_entries: str | None = None,
 ) -> None:
     prompt_path = _resolve_embedded_entries_prompt(prompts_root)
     input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
     if notes.strip():
         input_payload = f"{input_payload}\n\nNOTES:\n{notes.strip()}\n"
+    if embedded_entries:
+        input_payload = f"{input_payload}\n\nCANONICAL EMBEDDED ENTRIES:\n{embedded_entries.strip()}\n"
+    if variant_context:
+        input_payload = f"{input_payload}\n\nVARIANT NOTES:\n{variant_context.strip()}\n"
     compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
     llm_result = _invoke_llm(compiled_prompt, label="Embedded entries (notes)")
-    run_dir = character_dir / "runs" / authoring.build_run_id(character_dir.name)
+    run_dir = target_dir / "runs" / authoring.build_run_id(target_dir.name)
     authoring.write_embedded_entries_log(
         run_dir / "embedded_entries_auto_notes.md",
         prompt_compiled=compiled_prompt,
@@ -1193,12 +1364,13 @@ def _generate_embedded_entries_from_notes(
             file=sys.stderr,
         )
         return
+    (target_dir / "fragments").mkdir(parents=True, exist_ok=True)
     for entry_type, entry in selected:
         frontmatter = {"title": entry.title}
         if entry.scope_level_index is not None:
             frontmatter["scopeLevelIndex"] = entry.scope_level_index
         authoring.write_embedded_entry(
-            character_dir,
+            target_dir,
             entry_type=entry_type,
             entry_slug=entry.slug,
             body=entry.description,

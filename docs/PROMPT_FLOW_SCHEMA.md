@@ -78,6 +78,7 @@ The schema is written as JSON Schema (Draft 2020-12) so it can be validated offl
           "required": [
             "elaborate",
             "extract_fields",
+            "idiosyncrasy_module",
             "embedded_entries_auto",
             "embedded_entries_from_input",
             "rewrite_variants"
@@ -87,6 +88,9 @@ The schema is written as JSON Schema (Draft 2020-12) so it can be validated offl
               "$ref": "#/$defs/promptTemplate"
             },
             "extract_fields": {
+              "$ref": "#/$defs/promptTemplate"
+            },
+            "idiosyncrasy_module": {
               "$ref": "#/$defs/promptTemplate"
             },
             "tone": {
