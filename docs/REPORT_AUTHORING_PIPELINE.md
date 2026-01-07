@@ -2,6 +2,7 @@
 
 ## Verification summary
 - **bp author entrypoint**: `src/cli.py` (`main()` → `_run_author`) orchestrates the interactive authoring flow.
+- See `docs/schema-folder-input.md` for the markdown structure expected by `bp author schema-folder`.
 - **Authoring helpers**: `src/authoring.py` provides scaffolding, prompt template discovery, run logging, and parsing helpers.
 - **Prompt template loading**: `_select_prompt()` in `src/cli.py` lists templates via `authoring.list_prompt_templates()` from `prompts/<category>/` and selects by filename.
 - **Run logs + provenance**: `authoring.write_run_log()` writes:
