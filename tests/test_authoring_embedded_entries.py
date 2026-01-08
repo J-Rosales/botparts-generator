@@ -54,11 +54,13 @@ def test_select_embedded_entries_respects_target() -> None:
         "items": [
             authoring.EmbeddedEntry(title="Item A", slug="item-a", description="A"),
             authoring.EmbeddedEntry(title="Item B", slug="item-b", description="B"),
+            authoring.EmbeddedEntry(title="Item C", slug="item-c", description="C"),
         ],
         "locations": [
             authoring.EmbeddedEntry(title="Location A", slug="loc-a", description="A"),
+            authoring.EmbeddedEntry(title="Location B", slug="loc-b", description="B"),
         ],
     }
     selected = authoring.select_embedded_entries(entries_by_type, 2)
-    assert len(selected) == 2
-    assert [entry.slug for _, entry in selected] == ["item-a", "item-b"]
+    assert len(selected) == 4
+    assert [entry.slug for _, entry in selected] == ["item-a", "item-b", "loc-a", "loc-b"]
