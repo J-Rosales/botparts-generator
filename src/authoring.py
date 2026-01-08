@@ -17,6 +17,10 @@ SLUG_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 EMBEDDED_ENTRY_SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 SCOPE_LAYER_ORDER = ("world", "character", "variant")
 CANONICAL_REQUIRED_FILES = ("spec_v2_fields.md", "shortDescription.md")
+SECOND_PERSON_PRONOUN_PATTERN = re.compile(
+    r"\b(you|your|yours|yourself|yourselves)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,10 @@ def parse_staging_sections(text: str) -> list[HeadingSection]:
 
     flush()
     return sections
+
+
+def detect_second_person_pronouns(text: str) -> list[str]:
+    return sorted({match.group(0).lower() for match in SECOND_PERSON_PRONOUN_PATTERN.finditer(text)})
 
 
 def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
