@@ -293,6 +293,8 @@ def export_character_bundle(
         warnings.append(f"[{slug}] Canonical spec_v2_fields.md missing or invalid; export skipped.")
         return
 
+    draft_path = source_dir / "preliminary_draft.md"
+    draft_text = draft_path.read_text(encoding="utf-8") if draft_path.exists() else None
     short_description = authoring.load_short_description(source_dir / "canonical" / "shortDescription.md") or ""
     display_name = manifest_payload.get("name") or slug
     embedded_book = _build_character_book(source_dir, warnings, slug, display_name)
@@ -313,6 +315,8 @@ def export_character_bundle(
             fallback_tags=manifest_payload.get("tags") or [],
             prose_variant=prose_variant,
         )
+        if prose_variant == "hybrid" and draft_text is not None:
+            card_payload["data"]["first_mes"] = draft_text
         _write_json(export_character_root / f"spec_v2.{prose_variant}.json", card_payload)
     _write_json(export_character_root / "manifest.json", manifest_payload)
 
@@ -358,6 +362,8 @@ def export_character_bundle(
                 variant_slug=variant_dir.name,
                 prose_variant=prose_variant,
             )
+            if prose_variant == "hybrid" and draft_text is not None:
+                variant_payload["data"]["first_mes"] = draft_text
             _write_json(variant_root / f"spec_v2.{prose_variant}.json", variant_payload)
         if image_path is None:
             warnings.append(
