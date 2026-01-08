@@ -21,6 +21,17 @@ SECOND_PERSON_PRONOUN_PATTERN = re.compile(
     r"\b(you|your|yours|yourself|yourselves)\b",
     re.IGNORECASE,
 )
+SECOND_PERSON_SUBSTITUTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\byou are\b", re.IGNORECASE), "{{user}} is"),
+    (re.compile(r"\byou were\b", re.IGNORECASE), "{{user}} was"),
+    (re.compile(r"\byou have\b", re.IGNORECASE), "{{user}} has"),
+    (re.compile(r"\byou do\b", re.IGNORECASE), "{{user}} does"),
+    (re.compile(r"\byou\b", re.IGNORECASE), "{{user}}"),
+    (re.compile(r"\byour\b", re.IGNORECASE), "{{user}}'s"),
+    (re.compile(r"\byours\b", re.IGNORECASE), "{{user}}'s"),
+    (re.compile(r"\byourself\b", re.IGNORECASE), "{{user}}"),
+    (re.compile(r"\byourselves\b", re.IGNORECASE), "{{user}}"),
+)
 
 
 @dataclass(frozen=True)
@@ -134,6 +145,13 @@ def parse_staging_sections(text: str) -> list[HeadingSection]:
 
 def detect_second_person_pronouns(text: str) -> list[str]:
     return sorted({match.group(0).lower() for match in SECOND_PERSON_PRONOUN_PATTERN.finditer(text)})
+
+
+def sanitize_second_person_pronouns(text: str) -> str:
+    sanitized = text
+    for pattern, replacement in SECOND_PERSON_SUBSTITUTIONS:
+        sanitized = pattern.sub(replacement, sanitized)
+    return sanitized
 
 
 def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
