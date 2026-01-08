@@ -471,6 +471,7 @@ def _run_author_schema_file(
         compiled_elaboration = _compile_prompt(prompt_paths, elaboration_input, "CONCEPT SNIPPET")
         llm_result = _invoke_llm(compiled_elaboration, label="Elaboration")
         elaboration = llm_result.output_text
+        _enforce_third_person_user_voice(voice_prompt, elaboration, "Elaboration")
         for _, slug, character_dir in character_dirs:
             run_id = authoring.build_run_id(slug)
             run_dir = character_dir / "runs" / run_id
@@ -549,6 +550,11 @@ def _run_author_schema_file(
             compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
             llm_result = _invoke_llm(compiled_extraction, label="Extraction")
             extracted = llm_result.output_text
+            _enforce_third_person_user_voice(
+                voice_prompt,
+                extracted,
+                f"Extraction output for {slug}",
+            )
             run_dir = character_dir / "runs" / authoring.build_run_id(slug)
             authoring.write_run_log(
                 run_dir,
@@ -855,6 +861,18 @@ def _compile_prompt(prompt_paths: Iterable[Path], input_text: str, input_label: 
     normalized_input = input_text.strip()
     prompt_blocks.append(f"{input_label}:\n{normalized_input}")
     return "\n\n".join(block for block in prompt_blocks if block) + "\n"
+
+
+def _enforce_third_person_user_voice(voice_prompt: Path | None, output_text: str, label: str) -> None:
+    if voice_prompt is None or voice_prompt.name != "third_person_user_v1.md":
+        return
+    matches = authoring.detect_second_person_pronouns(output_text)
+    if matches:
+        joined = ", ".join(matches)
+        raise ValueError(
+            f"{label} output contains second-person pronouns ({joined}) while using "
+            f"{voice_prompt.name}. Replace with {{user}} references only."
+        )
 
 
 def _compile_variant_prompt(
