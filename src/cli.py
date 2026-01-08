@@ -426,6 +426,8 @@ def _run_author_schema_file(
             )
 
         manifest_prompts = draft.manifest.prompts
+        template_prompts = _load_schema_template_prompts(sources_root)
+        merged_prompts = {**template_prompts, **manifest_prompts}
         elaborate_prompt = _resolve_manifest_prompt(
             prompts_root,
             args.prompt_category,
@@ -509,7 +511,7 @@ def _run_author_schema_file(
         idiosyncrasy_prompt = _resolve_optional_manifest_prompt(
             prompts_root,
             args.idiosyncrasy_category,
-            manifest_prompts,
+            merged_prompts,
             "idiosyncrasy_module",
         )
         idiosyncrasy_input = _format_idiosyncrasy_payload(
@@ -577,7 +579,7 @@ def _run_author_schema_file(
                 variant_prompt = _resolve_optional_manifest_prompt(
                     prompts_root,
                     args.variant_category,
-                    manifest_prompts,
+                    merged_prompts,
                     "rewrite_variants",
                 )
                 try:
@@ -885,6 +887,42 @@ def _resolve_optional_manifest_prompt(
     if template_name:
         return _resolve_manifest_prompt(prompts_root, category, template_name, f"prompts.{prompt_key}")
     return _select_prompt(prompts_root, category)
+
+
+def _load_schema_template_prompts(sources_root: Path) -> dict[str, str]:
+    template_path = sources_root / "schema_inputs" / "schema_template.md"
+    if not template_path.exists():
+        return {}
+    template_text = template_path.read_text(encoding="utf-8")
+    lines = template_text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return {}
+    try:
+        end_index = lines[1:].index("---") + 1
+    except ValueError:
+        return {}
+    frontmatter = lines[1:end_index]
+    prompts: dict[str, str] = {}
+    in_prompts = False
+    for raw in frontmatter:
+        stripped = raw.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if not in_prompts:
+            if stripped == "prompts:":
+                in_prompts = True
+            continue
+        if not raw.startswith("  "):
+            break
+        if ":" not in raw:
+            continue
+        key, value = raw.split(":", 1)
+        value = value.strip()
+        if " #" in value:
+            value = value.split(" #", 1)[0].rstrip()
+        if value:
+            prompts[key.strip()] = value
+    return prompts
 
 
 def _parse_variant_notes(variant_notes: str) -> list[authoring.VariantDraft]:
