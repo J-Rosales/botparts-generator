@@ -173,7 +173,7 @@ prompts/
   idiosyncrasy_module/
     01_idiosyncrasy_module_v1.md
   rewrite_variants/
-    01_compact_v1.md
+    01_neutral_v1.md
   tone/
     01_tone_default.md
   voice/
