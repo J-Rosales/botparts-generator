@@ -553,6 +553,14 @@ def _validate_greetings_context(greetings: list[str]) -> list[str]:
 
 
 def parse_variant_groups(text: str) -> list[VariantGroup]:
+    def has_level_four_heading(text: str) -> bool:
+        for line in text.splitlines():
+            match = HEADING_PATTERN.match(line)
+            if match and len(match.group("level")) == 4:
+                return True
+        return False
+
+    grouped_format = has_level_four_heading(text)
     groups: list[VariantGroup] = []
     current_group_title: str | None = None
     current_variants: list[VariantDraft] = []
@@ -581,21 +589,32 @@ def parse_variant_groups(text: str) -> list[VariantGroup]:
         current_group_title = None
         current_variants = []
 
+    if not grouped_format:
+        current_group_title = "Variants"
+
     for line in text.splitlines():
         match = HEADING_PATTERN.match(line)
         if match:
             level = len(match.group("level"))
             title = match.group("title").strip()
-            if level <= 3:
-                flush_group()
-                if level == 3:
-                    current_group_title = title
-                continue
-            if level == 4 and current_group_title:
-                flush_variant()
-                current_variant_title = title
-                current_variant_lines = []
-                continue
+            if grouped_format:
+                if level <= 3:
+                    flush_group()
+                    if level == 3:
+                        current_group_title = title
+                    continue
+                if level == 4 and current_group_title:
+                    flush_variant()
+                    current_variant_title = title
+                    current_variant_lines = []
+                    continue
+            else:
+                if level <= 3:
+                    flush_variant()
+                    if level == 3:
+                        current_variant_title = title
+                        current_variant_lines = []
+                    continue
             if current_variant_title:
                 current_variant_lines.append(line)
             continue
@@ -603,7 +622,12 @@ def parse_variant_groups(text: str) -> list[VariantGroup]:
             current_variant_lines.append(line)
             continue
 
-    flush_group()
+    if grouped_format:
+        flush_group()
+    else:
+        flush_variant()
+        if current_group_title and current_variants:
+            groups.append(VariantGroup(title=current_group_title, variants=current_variants))
     return groups
 
 
