@@ -267,10 +267,10 @@ def _copy_png(source_path: Path, target_path: Path) -> None:
     target_path.write_bytes(source_path.read_bytes())
 
 
-def _find_character_image(image_root: Path, slug: str) -> Path | None:
+def _find_character_image(image_root: Path, stem: str) -> Path | None:
     if not image_root.exists():
         return None
-    candidates = sorted(path for path in image_root.iterdir() if path.is_file() and path.stem == slug)
+    candidates = sorted(path for path in image_root.iterdir() if path.is_file() and path.stem == stem)
     if not candidates:
         return None
     pngs = [path for path in candidates if path.suffix.lower() == ".png"]
@@ -316,8 +316,12 @@ def export_character_bundle(
         _write_json(export_character_root / f"spec_v2.{prose_variant}.json", card_payload)
     _write_json(export_character_root / "manifest.json", manifest_payload)
 
+    meta_path = source_dir / "meta.yaml"
+    meta = authoring.parse_meta_yaml(meta_path) if meta_path.exists() else {}
+    image_stem = meta.get("imageStem")
     image_root = workspace_root / "sources" / "image_inputs"
-    image_path = _find_character_image(image_root, slug)
+    image_key = image_stem.strip() if isinstance(image_stem, str) and image_stem.strip() else slug
+    image_path = _find_character_image(image_root, image_key)
     if image_path is None:
         warnings.append(f"[{slug}] PNG not found under sources/image_inputs; image export skipped.")
     else:

@@ -418,7 +418,12 @@ def _run_author_schema_file(
     character_dirs: list[tuple[str, str, Path]] = []
     try:
         for prose_variant, slug in slug_plan:
-            character_dir = authoring.scaffold_character(sources_root, slug, display_name)
+            character_dir = authoring.scaffold_character(
+                sources_root,
+                slug,
+                display_name,
+                image_stem=schema_path.stem,
+            )
             character_dirs.append((prose_variant, slug, character_dir))
             authoring.write_staging_snapshot(
                 character_dir,
