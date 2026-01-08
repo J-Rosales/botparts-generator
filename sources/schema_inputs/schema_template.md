@@ -32,5 +32,5 @@ Notes or edits to apply after elaboration.
 Optional notes or expected checks after audit.
 
 ## Variant notes
-Optional variant descriptions. Use `### Variant Group` and `#### Variant Name` headings, with the
-body containing the edits or circumstances for that variant.
+- Variant 1: variant 1 description
+- Variant 2: variant 2 description

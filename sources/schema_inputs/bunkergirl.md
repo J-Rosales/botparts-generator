@@ -6,7 +6,7 @@ prompts:
   tone: chill_v1.md
   style: casual_v1.md
   voice: third_person_user_v1.md
-prose_variant: all # allowed: schema-like | hybrid | all
+prose_variant: all
 embedded_entries:
   transform_notes: |
     Include persistent items inside the bunker, locations related to where you are and where she's from, relationships with people no longer with her, etc.
@@ -24,8 +24,10 @@ None. Continue as normal.
 ## Draft edits (manual)
 None. Continue as normal.
 
-## Extraction prompt notes
-None. Continue as normal.
-
 ## Audit notes
 None. Continue as normal.
+
+## Variant Notes
+- Infected: A variant where the apocalypse is caused by a virus that makes people into zombies. She was bitten recently and is hiding it from you.
+- Gay: Everything is the same, she just happens to be gay, only showing romantic interest in other women. One of her `knowledge` embedded items should be about her ex girlfriend.
+- Prepper: Instead of a regular person in a tough situation, Olivia is a highly trained conspiracy theorist, and had been preparing for the apocalypse for a while. She's knowledgeable about guns, state law and survival. Very libertarian.

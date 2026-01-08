@@ -9,14 +9,9 @@
 - Placeholder characters: 0
 - Total characters emitted: 1
 - Directories created:
-  - src/data
-  - src/data/characters
-  - src/data/characters/bunker-survivor
-  - src/data/characters/bunker-survivor/fragments
-  - src/data/characters/bunker-survivor/fragments/entries/items
-  - src/data/characters/bunker-survivor/fragments/entries/locations
-  - src/data/characters/bunker-survivor/fragments/entries/relationships
-  - src/data/fragments
+  - src\export
+  - src\export\characters
+  - src\export\characters\olivia-20260108061259
 
 ## Field Policy Summary
 - Site-only fields emitted under x:
@@ -30,4 +25,4 @@
 - aiTokens type: number|null.
 
 ## Warnings
-- None.
+- [olivia-20260108061259] PNG not found under sources/image_inputs; image export skipped.

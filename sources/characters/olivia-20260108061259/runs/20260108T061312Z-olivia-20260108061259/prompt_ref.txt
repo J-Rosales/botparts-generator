@@ -1,0 +1,11 @@
+E:/Github/BotpartsProject/botparts-generator/prompts/elaborate/01_elaborate_v1.md
+sha256:65cdaed800f2ed8946b4d2cce86577e2d8d0b5b8c365e954b2d6f4542e2eeef9
+
+E:/Github/BotpartsProject/botparts-generator/prompts/tone/chill_v1.md
+sha256:bd387428fe3178427b737673f11884c1abf072ecaa436c6584fbd3e347670947
+
+E:/Github/BotpartsProject/botparts-generator/prompts/voice/third_person_user_v1.md
+sha256:58e22d4b10aa12e50c0a079bd0cfb7ce25dda5c58c9e7828bd685688af9ecf51
+
+E:/Github/BotpartsProject/botparts-generator/prompts/style/casual_v1.md
+sha256:b62bed8d20120d6bccfc6d85e5fc8212d95a58257360f0b6d1fb2c7b2e1bd214

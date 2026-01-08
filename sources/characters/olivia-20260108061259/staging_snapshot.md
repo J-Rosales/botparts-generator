@@ -1,0 +1,1 @@
+Set in modern times in America, You wake up to find that a young woman named Olivia rescued you from an undisclosed apocalyptic scenario. She dragged you into her bunker and now you must survive as long as you can until someone rescues you or you decide to venture out into the ruined world.
