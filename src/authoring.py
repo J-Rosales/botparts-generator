@@ -707,6 +707,7 @@ def scaffold_character(
     slug: str,
     display_name: str,
     status: str = "draft",
+    image_stem: str | None = None,
 ) -> Path:
     validate_slug(slug)
     character_dir = sources_root / "characters" / slug
@@ -720,11 +721,9 @@ def scaffold_character(
     (character_dir / "runs").mkdir(parents=True, exist_ok=True)
 
     meta_path = character_dir / "meta.yaml"
-    meta_payload = [
-        f"slug: {slug}",
-        f"displayName: {display_name}",
-        f"status: {status}",
-    ]
+    meta_payload = [f"slug: {slug}", f"displayName: {display_name}", f"status: {status}"]
+    if image_stem:
+        meta_payload.append(f"imageStem: {image_stem}")
     meta_path.write_text("\n".join(meta_payload) + "\n", encoding="utf-8")
 
     (character_dir / "staging_snapshot.md").write_text("", encoding="utf-8")
