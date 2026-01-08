@@ -760,6 +760,8 @@ def merge_spec_fields(base: dict[str, Any], delta: dict[str, Any]) -> dict[str, 
     return merged
 
 
+
+
 def apply_variant_delta(canonical_path: Path, delta_path: Path) -> dict[str, Any]:
     canonical_fields = load_spec_fields(canonical_path)
     if not isinstance(canonical_fields, dict):
