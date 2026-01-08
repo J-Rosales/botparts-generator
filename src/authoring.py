@@ -79,13 +79,12 @@ class MinimalStagingDraft:
 REQUIRED_STAGING_HEADERS = {
     "character concept (staging selection)": 1,
     "display name": 2,
-}
-OPTIONAL_STAGING_HEADERS = {
     "elaborate prompt notes": 2,
     "draft edits (manual)": 2,
     "audit notes": 2,
     "variant notes": 2,
 }
+OPTIONAL_STAGING_HEADERS: dict[str, int] = {}
 FRONTMATTER_DELIMITER = "---"
 
 
@@ -167,15 +166,42 @@ def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
     _validate_staging_sections(sections)
     concept_section = required_section("Character concept (staging selection)")
     display_section = required_section("Display name")
-    elaborate_section = find_section("Elaborate prompt notes")
-    draft_edits_section = find_section("Draft edits (manual)")
-    audit_section = find_section("Audit notes")
+    elaborate_section = required_section("Elaborate prompt notes")
+    draft_edits_section = required_section("Draft edits (manual)")
+    audit_section = required_section("Audit notes")
     variant_section = find_section("Variant notes")
+    if variant_section is None:
+        raise ValueError("Missing required section: Variant notes.")
 
     concept = concept_section.content.strip()
     display_name = first_nonempty_line(display_section.content)
     if not display_name:
         raise ValueError("Display name section must include a value.")
+
+    variant_notes = ""
+    variant_chunks: list[str] = []
+    in_variant = False
+    for section in sections:
+        normalized_title = normalize(section.title)
+        if section.level <= 2:
+            if in_variant and normalized_title != "variant notes":
+                break
+            if section.level == 2 and normalized_title == "variant notes":
+                in_variant = True
+                content = section.content.strip()
+                if content:
+                    variant_chunks.append(content)
+            continue
+        if in_variant and section.level == 3:
+            heading = f"### {section.title}"
+            body = section.content.rstrip()
+            if body:
+                variant_chunks.append(f"{heading}\n{body}")
+            else:
+                variant_chunks.append(heading)
+    variant_notes = "\n\n".join(chunk for chunk in variant_chunks if chunk).strip()
+    if not variant_notes:
+        raise ValueError("Section 'Variant notes' must include content.")
 
     return MinimalStagingDraft(
         manifest=manifest,
@@ -184,7 +210,7 @@ def parse_minimal_staging_draft(text: str) -> MinimalStagingDraft:
         elaborate_notes=elaborate_section.content.strip() if elaborate_section else "",
         draft_edits=draft_edits_section.content.strip() if draft_edits_section else "",
         audit_notes=audit_section.content.strip() if audit_section else "",
-        variant_notes=variant_section.content.strip() if variant_section else "",
+        variant_notes=variant_notes,
     )
 
 
@@ -378,8 +404,17 @@ def _parse_frontmatter_nested(
 
 def _validate_staging_sections(sections: list[HeadingSection]) -> None:
     counts: dict[str, int] = {}
+    last_h2: str | None = None
     for section in sections:
         normalized = section.title.strip().lower()
+        if section.level >= 3:
+            if section.level != 3 or last_h2 != "variant notes":
+                line_info = f" (line {section.line_number})" if section.line_number else ""
+                raise ValueError(
+                    "Unsupported heading level found. Use bullet list items under "
+                    f"## Variant notes instead of ### headings{line_info}."
+                )
+            continue
         expected_level = REQUIRED_STAGING_HEADERS.get(normalized) or OPTIONAL_STAGING_HEADERS.get(normalized)
         if expected_level is None:
             line_info = f" (line {section.line_number})" if section.line_number else ""
@@ -393,6 +428,7 @@ def _validate_staging_sections(sections: list[HeadingSection]) -> None:
         if counts[normalized] > 1:
             line_info = f" (line {section.line_number})" if section.line_number else ""
             raise ValueError(f"Duplicate section '{section.title}'{line_info}.")
+        last_h2 = normalized if section.level == 2 else None
 
 
 def generate_slug(display_name: str, existing_slugs: set[str] | None = None) -> str:

@@ -20,14 +20,15 @@ def test_schema_folder_input_fixture_is_valid():
     heading_pattern = re.compile(r"^(#{1,6})\s+(.+)$", flags=re.MULTILINE)
     headings = [(len(match.group(1)), match.group(2).strip()) for match in heading_pattern.finditer(body)]
 
-    invalid_heading = next(
-        (
-            text
-            for level, text in headings
-            if level >= 3
-        ),
-        None,
-    )
+    invalid_heading = None
+    last_h2 = None
+    for level, text in headings:
+        if level == 2:
+            last_h2 = text
+        if level >= 3:
+            if level != 3 or last_h2 != "Variant notes":
+                invalid_heading = text
+                break
     assert (
         invalid_heading is None
     ), "Unsupported heading level found. Use bullet list items under ## Variant notes instead of ### headings."
@@ -38,7 +39,7 @@ def test_schema_folder_input_fixture_is_valid():
         h1_headings[0] == "Character concept (staging selection)"
     ), "H1 heading must be 'Character concept (staging selection)'."
 
-    allowed_h2 = {
+    required_h2 = {
         "Display name",
         "Elaborate prompt notes",
         "Draft edits (manual)",
@@ -46,6 +47,7 @@ def test_schema_folder_input_fixture_is_valid():
         "Variant notes",
     }
     h2_headings = [text for level, text in headings if level == 2]
-    disallowed_h2 = [text for text in h2_headings if text not in allowed_h2]
+    disallowed_h2 = [text for text in h2_headings if text not in required_h2]
     assert not disallowed_h2, f"Unsupported H2 headings found: {disallowed_h2}"
-    assert "Variant notes" in h2_headings, "Expected a ## Variant notes section."
+    missing_h2 = [text for text in required_h2 if text not in h2_headings]
+    assert not missing_h2, f"Missing required H2 headings: {missing_h2}"
