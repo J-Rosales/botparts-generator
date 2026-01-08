@@ -368,7 +368,13 @@ def _run_author_schema_folder(
         return 1
     failures = 0
     for schema_path in schema_paths:
-        result = _run_author_schema_file(schema_path, args, sources_root, prompts_root)
+        result = _run_author_schema_file(
+            schema_path,
+            args,
+            sources_root,
+            prompts_root,
+            wait_for_edit=False,
+        )
         if result != 0:
             failures += 1
     if failures:
@@ -382,6 +388,8 @@ def _run_author_schema_file(
     args: argparse.Namespace,
     sources_root: Path,
     prompts_root: Path,
+    *,
+    wait_for_edit: bool = True,
 ) -> int:
     if not schema_path.exists():
         print(f"Schema file not found: {schema_path}", file=sys.stderr)
@@ -493,10 +501,13 @@ def _run_author_schema_file(
             (character_dir / "preliminary_draft.md").write_text(draft_text, encoding="utf-8")
         primary_dir = character_dirs[0][2]
         primary_path = primary_dir / "preliminary_draft.md"
-        print(f"Review and edit: {primary_path.relative_to(Path.cwd()).as_posix()}")
-        authoring.try_open_in_editor(primary_path)
-        input("Press Enter once draft edits are saved...")
-        draft_input = primary_path.read_text(encoding="utf-8")
+        if wait_for_edit:
+            print(f"Review and edit: {primary_path.relative_to(Path.cwd()).as_posix()}")
+            authoring.try_open_in_editor(primary_path)
+            input("Press Enter once draft edits are saved...")
+            draft_input = primary_path.read_text(encoding="utf-8")
+        else:
+            draft_input = draft_text
         for _, _, character_dir in character_dirs:
             (character_dir / "preliminary_draft.md").write_text(draft_input, encoding="utf-8")
 
