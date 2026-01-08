@@ -27,7 +27,9 @@ Constraints:
 - Preserve the character's identity and voice from the draft.
 - first_mes and each alternate_greetings entry must describe a different situation and tone.
 - Each greeting should name the season, location, and named people where possible.
+- first_mes must be a paragraph or two (multi-sentence), not a single line. Use the space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
 - Each alternate_greetings entry must be a paragraph or two (multi-sentence), not a single line. Avoid repeating the same fact within a single entry (no internal redundancy). Use the extra space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
+- In first_mes and alternate_greetings, try to avoid repeating {{user}} multiple times in the same entry; mention {{user}} once, then rely on pronouns or implied context.
 - mes_example must contain exactly 4 examples in this format:
   <START>...<END>
   Separate examples with double newlines.
