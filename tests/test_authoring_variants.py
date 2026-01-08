@@ -45,6 +45,44 @@ def test_parse_variant_groups_level_three_only() -> None:
     assert groups[0].variants[1].description == "Variant two\n"
 
 
+def test_parse_variant_groups_bullets() -> None:
+    text = (
+        "- Infected: A variant where the apocalypse is caused by a virus.\n"
+        "- Gay: Everything is the same, she just happens to be gay.\n"
+    )
+    groups = authoring.parse_variant_groups(text)
+    assert [group.title for group in groups] == ["Variants"]
+    assert [variant.title for variant in groups[0].variants] == ["Infected", "Gay"]
+    assert groups[0].variants[0].description == "A variant where the apocalypse is caused by a virus.\n"
+    assert groups[0].variants[1].description == "Everything is the same, she just happens to be gay.\n"
+
+
+def test_parse_variant_groups_schema_format() -> None:
+    text = (
+        "---\n"
+        "version: 1\n"
+        "---\n"
+        "# Character concept (staging selection)\n"
+        "Example.\n"
+        "## Display name\n"
+        "Example\n"
+        "## Elaborate prompt notes\n"
+        "None.\n"
+        "## Draft edits (manual)\n"
+        "None.\n"
+        "## Audit notes\n"
+        "None.\n"
+        "## Variant Notes\n"
+        "- Infected: A variant where the apocalypse is caused by a virus.\n"
+        "- Prepper: Highly trained and armed.\n"
+    )
+    groups = authoring.parse_variant_groups(text)
+    assert [group.title for group in groups] == ["Variants"]
+    assert [variant.title for variant in groups[0].variants] == ["Infected", "Prepper"]
+    assert groups[0].variants[0].description == "A variant where the apocalypse is caused by a virus.\n"
+    assert groups[0].variants[1].description == "Highly trained and armed.\n"
+
+
 def test_author_variants_creates_runs_and_drafts(
     tmp_path: Path,
     monkeypatch,

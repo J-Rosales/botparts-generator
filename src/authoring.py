@@ -586,7 +586,86 @@ def parse_variant_groups(text: str) -> list[VariantGroup]:
                 return True
         return False
 
-    grouped_format = has_level_four_heading(text)
+    def has_variant_notes_section(text: str) -> bool:
+        for line in text.splitlines():
+            match = HEADING_PATTERN.match(line)
+            if match and match.group("title").strip().lower() == "variant notes":
+                return True
+        return False
+
+    def normalize(value: str) -> str:
+        return value.strip().lower()
+
+    def extract_variant_notes(text: str) -> str | None:
+        normalized_text = _normalize_line_endings(text)
+        body = normalized_text
+        if normalized_text.startswith(f"{FRONTMATTER_DELIMITER}\n"):
+            _, body = _split_frontmatter(normalized_text)
+        sections = parse_staging_sections(body)
+        if not sections:
+            return None
+        variant_chunks: list[str] = []
+        in_variant = False
+        for section in sections:
+            normalized_title = normalize(section.title)
+            if section.level <= 2:
+                if in_variant and normalized_title != "variant notes":
+                    break
+                if section.level == 2 and normalized_title == "variant notes":
+                    in_variant = True
+                    content = section.content.strip()
+                    if content:
+                        variant_chunks.append(content)
+                continue
+            if in_variant and section.level == 3:
+                heading = f"### {section.title}"
+                body = section.content.rstrip()
+                if body:
+                    variant_chunks.append(f"{heading}\n{body}")
+                else:
+                    variant_chunks.append(heading)
+        variant_notes = "\n\n".join(chunk for chunk in variant_chunks if chunk).strip()
+        return variant_notes if variant_notes else None
+
+    def parse_bullet_variants(text: str) -> list[VariantDraft]:
+        variants: list[VariantDraft] = []
+        current_title: str | None = None
+        current_lines: list[str] = []
+
+        def flush_variant() -> None:
+            nonlocal current_title, current_lines, variants
+            if current_title is None:
+                return
+            content = "\n".join(current_lines).strip()
+            if content:
+                content += "\n"
+            variants.append(VariantDraft(title=current_title, description=content))
+            current_title = None
+            current_lines = []
+
+        for raw_line in text.splitlines():
+            line = raw_line.rstrip()
+            stripped = line.lstrip()
+            if stripped.startswith(("- ", "* ")):
+                flush_variant()
+                bullet = stripped[2:].strip()
+                title, separator, remainder = bullet.partition(":")
+                current_title = title.strip()
+                description = remainder.strip() if separator else ""
+                current_lines = [description] if description else []
+                continue
+            if current_title is not None and stripped:
+                current_lines.append(stripped)
+        flush_variant()
+        return variants
+
+    variant_text = text
+    if has_variant_notes_section(text):
+        extracted = extract_variant_notes(text)
+        if extracted is not None:
+            variant_text = extracted
+
+    grouped_format = has_level_four_heading(variant_text)
     groups: list[VariantGroup] = []
     current_group_title: str | None = None
     current_variants: list[VariantDraft] = []
@@ -618,7 +697,7 @@ def parse_variant_groups(text: str) -> list[VariantGroup]:
     if not grouped_format:
         current_group_title = "Variants"
 
-    for line in text.splitlines():
+    for line in variant_text.splitlines():
         match = HEADING_PATTERN.match(line)
         if match:
             level = len(match.group("level"))
@@ -654,7 +733,14 @@ def parse_variant_groups(text: str) -> list[VariantGroup]:
         flush_variant()
         if current_group_title and current_variants:
             groups.append(VariantGroup(title=current_group_title, variants=current_variants))
-    return groups
+
+    if groups:
+        return groups
+
+    bullet_variants = parse_bullet_variants(variant_text)
+    if bullet_variants:
+        return [VariantGroup(title="Variants", variants=bullet_variants)]
+    return []
 
 
 def select_section_by_title(sections: Iterable[HeadingSection], title: str) -> HeadingSection | None:
