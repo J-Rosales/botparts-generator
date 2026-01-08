@@ -475,12 +475,12 @@ def select_embedded_entries(
     entries_by_type: dict[str, list[EmbeddedEntry]],
     count: int,
 ) -> list[tuple[str, EmbeddedEntry]]:
-    flattened: list[tuple[str, EmbeddedEntry]] = []
-    for entry_type, entries in entries_by_type.items():
-        for entry in entries:
-            flattened.append((entry_type, entry))
-    flattened.sort(key=lambda item: (item[0], item[1].slug))
-    return flattened[:count]
+    selected: list[tuple[str, EmbeddedEntry]] = []
+    for entry_type in sorted(entries_by_type):
+        entries = sorted(entries_by_type[entry_type], key=lambda entry: entry.slug)
+        for entry in entries[:count]:
+            selected.append((entry_type, entry))
+    return selected
 
 
 def validate_spec_v2_llm_output(payload: dict[str, Any]) -> None:

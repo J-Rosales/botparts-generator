@@ -1161,9 +1161,10 @@ def _prompt_embedded_entries_auto(
         print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
         return
     selected = authoring.select_embedded_entries(entries_by_type, EMBEDDED_ENTRY_MAX)
-    if len(selected) < EMBEDDED_ENTRY_MAX:
+    expected_total = EMBEDDED_ENTRY_MAX * len(EMBEDDED_ENTRY_TYPES)
+    if len(selected) < expected_total:
         print(
-            f"Embedded entry generation produced {len(selected)} entries; expected {EMBEDDED_ENTRY_MAX}.",
+            f"Embedded entry generation produced {len(selected)} entries; expected {expected_total}.",
             file=sys.stderr,
         )
         return
@@ -1354,7 +1355,7 @@ def _parse_embedded_entries_input(line: str) -> tuple[str, str | None, str | Non
 
 def _format_embedded_entries_auto_payload(entry_types: Iterable[str], target: int) -> str:
     lines = [f"- {entry_type}" for entry_type in entry_types]
-    return "Entry types:\n" + "\n".join(lines) + f"\n\nTarget total entries: {target}"
+    return "Entry types:\n" + "\n".join(lines) + f"\n\nTarget entries per type: {target}"
 
 
 def _format_embedded_entries_input_payload(entry_type: str, name: str, description: str) -> str:
@@ -1434,9 +1435,10 @@ def _generate_embedded_entries_from_notes(
         print(f"Embedded entry parsing failed: {exc}", file=sys.stderr)
         return
     selected = authoring.select_embedded_entries(entries_by_type, EMBEDDED_ENTRY_MAX)
-    if len(selected) < EMBEDDED_ENTRY_MAX:
+    expected_total = EMBEDDED_ENTRY_MAX * len(EMBEDDED_ENTRY_TYPES)
+    if len(selected) < expected_total:
         print(
-            f"Embedded entry generation produced {len(selected)} entries; expected {EMBEDDED_ENTRY_MAX}.",
+            f"Embedded entry generation produced {len(selected)} entries; expected {expected_total}.",
             file=sys.stderr,
         )
         return
