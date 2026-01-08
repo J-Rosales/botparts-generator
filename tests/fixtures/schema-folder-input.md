@@ -28,6 +28,11 @@ None. Continue as normal.
 None. Continue as normal.
 
 ## Variant notes
-- Infected: A variant where the apocalypse is caused by a virus that makes people into zombies. She was bitten recently and is hiding it from you.
-- Gay: Everything is the same, she just happens to be gay, only showing romantic interest in other women. One of her `knowledge` embedded items should be about her ex girlfriend.
-- Prepper: Instead of a regular person in a tough situation, Olivia is a conspiracy theorist, and had been preparing for the apocalypse. She's highly knowledgeable about guns, state law and survival. Very libertarian.
+### Infected
+A variant where the apocalypse is caused by a virus that makes people into zombies. She was bitten recently and is hiding it from you.
+
+### Gay
+Everything is the same, she just happens to be gay, only showing romantic interest in other women. One of her `knowledge` embedded items should be about her ex girlfriend.
+
+### Prepper
+Instead of a regular person in a tough situation, Olivia is a conspiracy theorist, and had been preparing for the apocalypse. She's highly knowledgeable about guns, state law and survival. Very libertarian.

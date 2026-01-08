@@ -5,9 +5,9 @@ This document describes the markdown format consumed by `bp author schema-folder
 ## Required structure
 1. A YAML frontmatter block enclosed by `---` at the top and bottom of the file.
 2. A **single H1** exactly equal to `# Character concept (staging selection)`.
-3. Optional H2 sections from the allowed list below.
+3. Required H2 sections from the allowed list below.
 
-### Allowed H2 sections
+### Required H2 sections
 - `## Display name`
 - `## Elaborate prompt notes`
 - `## Draft edits (manual)`
@@ -15,8 +15,9 @@ This document describes the markdown format consumed by `bp author schema-folder
 - `## Variant notes`
 
 ### Variant notes rules
-- Variants must be **bullet list items** under `## Variant notes`.
-- Do **not** use `###` headings for variant names because the parser treats them as unsupported.
+- Variants may be written as **bullet list items** under `## Variant notes`.
+- Variant names may also be written as `###` headings under `## Variant notes`.
+- `###` headings are only allowed under `## Variant notes`. Elsewhere, `###` headings are rejected.
 
 ## Full example
 ```
@@ -50,7 +51,12 @@ None. Continue as normal.
 None. Continue as normal.
 
 ## Variant notes
-- Infected: A variant where the apocalypse is caused by a virus that makes people into zombies. She was bitten recently and is hiding it from you.
-- Gay: Everything is the same, she just happens to be gay, only showing romantic interest in other women. One of her `knowledge` embedded items should be about her ex girlfriend.
-- Prepper: Instead of a regular person in a tough situation, Olivia is a conspiracy theorist, and had been preparing for the apocalypse. She's highly knowledgeable about guns, state law and survival. Very libertarian.
+### Infected
+A variant where the apocalypse is caused by a virus that makes people into zombies. She was bitten recently and is hiding it from you.
+
+### Gay
+Everything is the same, she just happens to be gay, only showing romantic interest in other women. One of her `knowledge` embedded items should be about her ex girlfriend.
+
+### Prepper
+Instead of a regular person in a tough situation, Olivia is a conspiracy theorist, and had been preparing for the apocalypse. She's highly knowledgeable about guns, state law and survival. Very libertarian.
 ```
