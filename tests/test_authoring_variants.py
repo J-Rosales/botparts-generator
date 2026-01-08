@@ -30,6 +30,21 @@ def test_parse_variant_groups() -> None:
     assert groups[1].variants[0].description == "Only line\n"
 
 
+def test_parse_variant_groups_level_three_only() -> None:
+    text = (
+        "### Calm Tone\n"
+        "First line\n"
+        "Second line\n"
+        "### Storm Front\n"
+        "Variant two\n"
+    )
+    groups = authoring.parse_variant_groups(text)
+    assert [group.title for group in groups] == ["Variants"]
+    assert [variant.title for variant in groups[0].variants] == ["Calm Tone", "Storm Front"]
+    assert groups[0].variants[0].description == "First line\nSecond line\n"
+    assert groups[0].variants[1].description == "Variant two\n"
+
+
 def test_author_variants_creates_runs_and_drafts(
     tmp_path: Path,
     monkeypatch,
@@ -71,7 +86,10 @@ def test_author_variants_creates_runs_and_drafts(
     monkeypatch.setattr(
         cli,
         "_invoke_llm",
-        lambda _: LLMResult(output_text='{"name": "Variant"}', model_info={"model": "stub"}),
+        lambda *_args, **_kwargs: LLMResult(
+            output_text='{"name": "Variant"}',
+            model_info={"model": "stub"},
+        ),
     )
 
     args = SimpleNamespace(staging_file=None)
