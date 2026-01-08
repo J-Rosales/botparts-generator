@@ -473,6 +473,8 @@ def _run_author_schema_file(
         compiled_elaboration = _compile_prompt(prompt_paths, elaboration_input, "CONCEPT SNIPPET")
         llm_result = _invoke_llm(compiled_elaboration, label="Elaboration")
         elaboration = llm_result.output_text
+        if voice_prompt is not None and voice_prompt.name == "third_person_user_v1.md":
+            elaboration = authoring.sanitize_second_person_pronouns(elaboration)
         _enforce_third_person_user_voice(voice_prompt, elaboration, "Elaboration")
         for _, slug, character_dir in character_dirs:
             run_id = authoring.build_run_id(slug)
@@ -552,6 +554,8 @@ def _run_author_schema_file(
             compiled_extraction = _compile_prompt([extract_prompt], extraction_input, "DRAFT")
             llm_result = _invoke_llm(compiled_extraction, label="Extraction")
             extracted = llm_result.output_text
+            if voice_prompt is not None and voice_prompt.name == "third_person_user_v1.md":
+                extracted = authoring.sanitize_second_person_pronouns(extracted)
             _enforce_third_person_user_voice(
                 voice_prompt,
                 extracted,
