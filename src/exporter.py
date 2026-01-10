@@ -329,7 +329,7 @@ def export_character_bundle(
     if image_path is None:
         warnings.append(f"[{slug}] PNG not found under sources/image_inputs; image export skipped.")
     else:
-        png_target = export_character_root / f"{slug}.png"
+        png_target = export_character_root / "avatarImage.png"
         _copy_png(image_path, png_target)
 
     variants_root = source_dir / "variants"
@@ -370,5 +370,5 @@ def export_character_bundle(
                 f"[{slug}] PNG not found for variant '{variant_dir.name}'; image export skipped."
             )
         else:
-            png_target = variant_root / f"{slug}--{variant_dir.name}.png"
+            png_target = variant_root / "avatarImage.png"
             _copy_png(image_path, png_target)
