@@ -11,7 +11,8 @@
 - Directories created:
   - src\export
   - src\export\characters
-  - src\export\characters\olivia-20260108061259
+  - src\export\characters\pearl-20260110052021
+  - src\export\characters\pearl-20260110052021\variants\morbid
 
 ## Field Policy Summary
 - Site-only fields emitted under x:
@@ -25,4 +26,6 @@
 - aiTokens type: number|null.
 
 ## Warnings
-- [olivia-20260108061259] PNG not found under sources/image_inputs; image export skipped.
+- [pearl-20260110051937] Missing manifest.json in sources.
+- [pearl-20260110052021] PNG not found under sources/image_inputs; image export skipped.
+- [pearl-20260110052021] PNG not found for variant 'morbid'; image export skipped.

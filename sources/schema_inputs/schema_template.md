@@ -4,7 +4,7 @@ prompts:
   elaborate: 01_elaborate_v1.md
   extract_fields: 01_specv2_fields_v1.md
   idiosyncrasy_module: 01_idiosyncrasy_module_v1.md
-  rewrite_variants: 01_compact_v1.md
+  rewrite_variants: 01_neutral_v1.md
   tone: 01_neutral_v1.md
   style: 01_neutral_v1.md
   voice: 01_neutral_v1.md

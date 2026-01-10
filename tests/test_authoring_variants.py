@@ -105,7 +105,7 @@ def test_author_variants_creates_runs_and_drafts(
         encoding="utf-8",
     )
 
-    prompt_path = prompts_root / "rewrite_variants" / "01_compact_v1.md"
+    prompt_path = prompts_root / "rewrite_variants" / "01_neutral_v1.md"
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     prompt_path.write_text("Rewrite prompt", encoding="utf-8")
 
