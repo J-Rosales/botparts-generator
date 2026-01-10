@@ -1,0 +1,2 @@
+E:/Github/BotpartsProject/botparts-generator/prompts/rewrite_variants/01_neutral_v1.md
+sha256:c3e614adb9e81473ff45a6e3ba6a74165e525f1f5149a3f33c106152399cb0e2

@@ -5,14 +5,27 @@
 - Placeholders enabled: False (0)
 
 ## Output Summary
-- Real characters: 1
+- Real characters: 5
 - Placeholder characters: 0
-- Total characters emitted: 1
+- Total characters emitted: 5
 - Directories created:
+  - src\data
   - src\export
   - src\export\characters
-  - src\export\characters\pearl-20260110052021
-  - src\export\characters\pearl-20260110052021\variants\morbid
+  - src\export\characters\jenny-20260110210051
+  - src\export\characters\jenny-20260110210051\variants\morbid
+  - src\export\characters\lydia-20260110210212
+  - src\export\characters\lydia-20260110210212\variants\homewrecker
+  - src\export\characters\lydia-20260110210212\variants\scoundrel
+  - src\export\characters\olivia-20260110205623
+  - src\export\characters\olivia-20260110205623\variants\gay
+  - src\export\characters\olivia-20260110205623\variants\infected
+  - src\export\characters\olivia-20260110205623\variants\prepper
+  - src\export\characters\syd-20260110205848
+  - src\export\characters\syd-20260110205848\variants\royal
+  - src\export\characters\syd-20260110205848\variants\uncouth
+  - src\export\characters\wizard-20260110210410
+  - src\export\characters\wizard-20260110210410\variants\saccharomancer
 
 ## Field Policy Summary
 - Site-only fields emitted under x:
@@ -26,6 +39,4 @@
 - aiTokens type: number|null.
 
 ## Warnings
-- [pearl-20260110051937] Missing manifest.json in sources.
-- [pearl-20260110052021] PNG not found under sources/image_inputs; image export skipped.
-- [pearl-20260110052021] PNG not found for variant 'morbid'; image export skipped.
+- None.

@@ -1,0 +1,119 @@
+{
+  "entries": [
+    {
+      "description": "Jenny is a hospital cleaner who moves through the halls unnoticed, dedicated to her work despite the physical toll it takes on her. She is worn but necessary, quietly enduring the grind of cleaning sickness and dirt without recognition.",
+      "name": "Jenny",
+      "placeholder": false,
+      "redistributeAllowed": "unknown",
+      "shortDescription": "Jenny is a resilient hospital cleaner who quietly endures the physical and emotional toll of her unseen work during long, solitary shifts.",
+      "slug": "jenny-20260110210051",
+      "spoilerTags": [],
+      "tags": [
+        "hospital",
+        "cleaner",
+        "resilience",
+        "invisible labor",
+        "quiet endurance",
+        "night shift"
+      ],
+      "uploadDate": "",
+      "variantSlugs": [
+        "morbid"
+      ]
+    },
+    {
+      "description": "Lydia is a twenty-three-year-old prodigious head of the estate’s kitchen, commanding with sharp precision and quiet authority. She is known for her efficient, disciplined approach to cooking and her deep care for the craft, creating meals that guests savor and remember. Though reserved and clipped in speech, she shows respect and subtle warmth to those who earn it, especially those who share her dedication to responsibility.",
+      "name": "Lydia",
+      "placeholder": false,
+      "redistributeAllowed": "unknown",
+      "shortDescription": "Lydia is a disciplined young head chef of a grand estate’s kitchen, known for her sharp efficiency, quiet authority, and subtle warmth beneath a reserved exterior.",
+      "slug": "lydia-20260110210212",
+      "spoilerTags": [],
+      "tags": [
+        "kitchen",
+        "prodigy",
+        "estate",
+        "discipline",
+        "quiet",
+        "authority",
+        "culinary",
+        "period"
+      ],
+      "uploadDate": "",
+      "variantSlugs": [
+        "homewrecker",
+        "scoundrel"
+      ]
+    },
+    {
+      "description": "A calm, confident young woman who inhabits a quiet, dimly lit bunker filled with preserved food and books, offering a gentle presence and reassurance to those who find themselves in this mysterious shelter.",
+      "name": "Olivia",
+      "placeholder": false,
+      "redistributeAllowed": "unknown",
+      "shortDescription": "Olivia is a calm and kind woman who offers quiet reassurance and safety within a dimly lit bunker filled with preserved food and old books.",
+      "slug": "olivia-20260110205623",
+      "spoilerTags": [],
+      "tags": [
+        "post-apocalyptic",
+        "calm",
+        "female",
+        "bunker",
+        "reassuring",
+        "mysterious"
+      ],
+      "uploadDate": "",
+      "variantSlugs": [
+        "gay",
+        "infected",
+        "prepper"
+      ]
+    },
+    {
+      "description": "A young apprentice gardener and healer who tends the magical plants within an ancient wizard's tower, bridging the natural world and arcane sorcery with her nascent gifts.",
+      "name": "Syd",
+      "placeholder": false,
+      "redistributeAllowed": "unknown",
+      "shortDescription": "Syd is a tentative yet earnest apprentice gardener and healer nurturing magical plants within an ancient wizard's tower while forging a fragile alliance with her mentor.",
+      "slug": "syd-20260110205848",
+      "spoilerTags": [],
+      "tags": [
+        "fantasy",
+        "apprentice",
+        "gardener",
+        "magic",
+        "mentor",
+        "healer",
+        "wizard tower",
+        "nature",
+        "growth"
+      ],
+      "uploadDate": "",
+      "variantSlugs": [
+        "royal",
+        "uncouth"
+      ]
+    },
+    {
+      "description": "A young apprentice tending a magical garden within a wizard's tower, nurturing enchanted plants vital for arcane rituals and healing.",
+      "name": "Arcane Gardener",
+      "placeholder": false,
+      "redistributeAllowed": "unknown",
+      "shortDescription": "A patient apprentice tending a magical garden within a wizard’s tower, nurturing enchanted plants vital for arcane rituals and healing.",
+      "slug": "wizard-20260110210410",
+      "spoilerTags": [],
+      "tags": [
+        "magic",
+        "nature",
+        "wizard",
+        "apprentice",
+        "garden",
+        "ritual",
+        "fantasy"
+      ],
+      "uploadDate": "",
+      "variantSlugs": [
+        "saccharomancer"
+      ]
+    }
+  ]
+}

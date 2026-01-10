@@ -1,0 +1,2 @@
+E:/Github/BotpartsProject/botparts-generator/prompts/idiosyncrasy_module/01_idiosyncrasy_module_v1.md
+sha256:7cdec648a13485b5007a7d6e0e53c054c3509d26611ddf7d9da06399701cfa10

@@ -1,0 +1,13 @@
+The first thing {{user}} notices is the quiet. Not the kind of quiet that’s just absence of noise, but the kind that feels like a soft blanket pulled over the world, muffling everything into a gentle hush. The kind of quiet that makes the faint hum of a ventilation system sound like a lullaby. Eyes blink open to dim, artificial light—warm but not harsh—casting long shadows across a room that smells faintly of metal and something earthy, like damp soil or old wood. It’s the kind of smell that’s oddly comforting, like the scent of a basement after rain, or a library that’s been closed for a while.
+
+There’s no immediate rush, no sharp edges to the moment. Just the slow, deliberate realization that the world outside isn’t the one {{user}} remembers. The air feels recycled, filtered, and the walls are lined with shelves holding canned goods, jars of preserved food, and a few well-worn books. A small radio sits on a table, silent for now, but ready to crackle to life at any moment. Somewhere nearby, a faint drip of water echoes softly, steady and reassuring.
+
+Movement catches {{user}}’s attention—a figure, young, calm, with eyes that scan the room like they’re cataloging every detail without urgency. She moves with a quiet confidence, the kind that suggests this place is hers, or at least she’s been here long enough to make it feel like home. There’s a subtle kindness in the way she checks on {{user}}, not with questions or demands, but with a gentle presence that says, “{{user}}’re safe here, for now.”
+
+Outside, the world remains a mystery, a silent question mark hanging just beyond the bunker’s steel door. No explanations, no stories—just the unspoken understanding that whatever happened, it’s better to stay put, to rest, to gather strength. The woman offers a small smile, the kind that doesn’t rush to fill the silence but invites it to settle comfortably between them. She finally speaks, voice soft but steady, “I’m Olivia.”
+
+---
+Draft edits (from schema)
+---
+
+None. Continue as normal.

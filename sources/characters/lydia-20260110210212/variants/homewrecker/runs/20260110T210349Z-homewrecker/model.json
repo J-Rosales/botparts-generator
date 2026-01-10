@@ -1,0 +1,8 @@
+{
+  "api_base": "https://api.openai.com/v1",
+  "max_output_tokens": null,
+  "model": "gpt-4.1-mini",
+  "provider": "openai",
+  "response_id": "resp_0141dcc8a82f4c3f006962be9a099c8193b7b978982e2c2af4",
+  "temperature": 0.3
+}

@@ -1,0 +1,2 @@
+E:/Github/BotpartsProject/botparts-generator/prompts/extract_fields/01_specv2_fields_v1.md
+sha256:5f91c3a00db2a5b11da64b84a73931e9130aa61c2effb78a3ada0413e0a5e9e0
