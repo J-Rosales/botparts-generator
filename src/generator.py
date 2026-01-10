@@ -660,6 +660,7 @@ def build_site_data(
     if export_root.exists():
         shutil.rmtree(export_root)
 
+    _ensure_dir(data_root, created_dirs)
     _ensure_dir(export_root, created_dirs)
     _ensure_dir(export_root / "characters", created_dirs)
 
@@ -709,6 +710,7 @@ def build_site_data(
             placeholder_manifests = [_placeholder_manifest(index) for index in range(1, placeholder_count + 1)]
 
     all_manifests = character_sources + placeholder_manifests
+    catalogue_entries: list[dict[str, Any]] = []
 
     for source_manifest in all_manifests:
         slug = source_manifest.get("slug") or "unknown"
@@ -805,6 +807,26 @@ def build_site_data(
                 warnings=warnings,
                 created_dirs=created_dirs,
             )
+        catalogue_entry = {
+            "slug": slug,
+            "name": manifest_payload["name"],
+            "description": manifest_payload["description"],
+            "tags": tags,
+            "shortDescription": short_description,
+            "spoilerTags": spoiler_tags,
+            "uploadDate": upload_date,
+            "redistributeAllowed": manifest_payload["redistributeAllowed"],
+            "placeholder": source_manifest in placeholder_manifests,
+        }
+        if variant_slugs:
+            catalogue_entry["variantSlugs"] = variant_slugs
+        catalogue_entries.append(catalogue_entry)
+
+    catalogue_entries.sort(key=lambda entry: entry["slug"])
+    catalogue_payload: dict[str, Any] = {"entries": catalogue_entries}
+    if include_timestamps:
+        catalogue_payload["generatedAt"] = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    _write_json(data_root / "catalogue.json", catalogue_payload)
 
     report_path = dist_root / "REPORT.md"
     report_path.write_text(

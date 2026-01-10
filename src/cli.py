@@ -31,7 +31,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     build_parser.add_argument(
         "--include-timestamps",
         action="store_true",
-        help="Include timestamps in the report and index.json.",
+        help="Include timestamps in the report and catalogue.json.",
     )
     build_parser.add_argument(
         "--strict-scope",
