@@ -5,14 +5,13 @@
 - Placeholders enabled: False (0)
 
 ## Output Summary
-- Real characters: 1
+- Real characters: 0
 - Placeholder characters: 0
-- Total characters emitted: 1
+- Total characters emitted: 0
 - Directories created:
-  - src\export
-  - src\export\characters
-  - src\export\characters\pearl-20260110052021
-  - src\export\characters\pearl-20260110052021\variants\morbid
+  - src/data
+  - src/export
+  - src/export/characters
 
 ## Field Policy Summary
 - Site-only fields emitted under x:
@@ -26,6 +25,4 @@
 - aiTokens type: number|null.
 
 ## Warnings
-- [pearl-20260110051937] Missing manifest.json in sources.
-- [pearl-20260110052021] PNG not found under sources/image_inputs; image export skipped.
-- [pearl-20260110052021] PNG not found for variant 'morbid'; image export skipped.
+- None.
