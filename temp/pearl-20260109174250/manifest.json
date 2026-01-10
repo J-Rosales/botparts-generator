@@ -1,0 +1,40 @@
+{
+  "base": {
+    "fragments": {}
+  },
+  "description": "Pearl is a young, optimistic mercenary entrepreneur who runs a one-woman company called Pearl’s Ventures from a small town’s outskirts. Though not a skilled fighter, she excels in persistence, adaptability, and building a network of trust and opportunity in a politically unstable region.",
+  "modules": [],
+  "name": "Pearl",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/unknown"
+    }
+  },
+  "redistributeAllowed": "unknown",
+  "slug": "pearl-20260109174250",
+  "tags": [
+    "mercenary",
+    "entrepreneur",
+    "optimistic",
+    "small town",
+    "political intrigue",
+    "fantasy",
+    "female protagonist"
+  ],
+  "transforms": [],
+  "x": {
+    "aiTokens": null,
+    "placeholder": false,
+    "proseVariants": [
+      "schema-like",
+      "hybrid"
+    ],
+    "shortDescription": "Pearl is a young, optimistic mercenary entrepreneur building her fledgling company from a small town’s edge, navigating political unrest with determination and adaptability.",
+    "spoilerTags": [],
+    "uploadDate": "",
+    "variantSlugs": [
+      "dungeon",
+      "scoundrel"
+    ]
+  }
+}
