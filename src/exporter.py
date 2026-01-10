@@ -100,6 +100,75 @@ def _coerce_string_list(value: Any) -> list[str]:
     return []
 
 
+def _emit_embedded_entry_fragments(
+    source_dir: Path,
+    output_root: Path,
+    warnings: list[str],
+    slug: str,
+) -> dict[str, list[str]]:
+    entries_root = source_dir / "fragments" / "entries"
+    embedded_entries: dict[str, list[str]] = {entry_type: [] for entry_type in EMBEDDED_ENTRY_TYPES}
+    output_entries_root = output_root / "fragments" / "entries"
+    output_entries_root.mkdir(parents=True, exist_ok=True)
+
+    if not entries_root.exists():
+        (output_entries_root / ".keep").write_text("", encoding="utf-8")
+        for entry_type in EMBEDDED_ENTRY_TYPES:
+            entry_dir = output_entries_root / entry_type
+            entry_dir.mkdir(parents=True, exist_ok=True)
+            (entry_dir / ".keep").write_text("", encoding="utf-8")
+        return embedded_entries
+    if not entries_root.is_dir():
+        warnings.append(f"[{slug}] Embedded entries root is not a directory; skipping.")
+        (output_entries_root / ".keep").write_text("", encoding="utf-8")
+        return embedded_entries
+
+    for entry_type in EMBEDDED_ENTRY_TYPES:
+        source_type_dir = entries_root / entry_type
+        output_type_dir = output_entries_root / entry_type
+        output_type_dir.mkdir(parents=True, exist_ok=True)
+        if not source_type_dir.exists() or not source_type_dir.is_dir():
+            (output_type_dir / ".keep").write_text("", encoding="utf-8")
+            continue
+
+        candidates: list[Path] = []
+        for path in sorted(source_type_dir.iterdir(), key=lambda item: item.name):
+            if path.is_dir():
+                warnings.append(
+                    f"[{slug}] Embedded entry '{entry_type}/{path.name}' is a directory; skipping."
+                )
+                continue
+            if path.name in EMBEDDED_ENTRY_PLACEHOLDERS:
+                continue
+            if not EMBEDDED_ENTRY_FILENAME.match(path.name):
+                warnings.append(
+                    f"[{slug}] Embedded entry '{entry_type}/{path.name}' does not match naming rules; skipping."
+                )
+                continue
+            candidates.append(path)
+
+        if not candidates:
+            (output_type_dir / ".keep").write_text("", encoding="utf-8")
+            continue
+
+        entry_paths: list[str] = []
+        for path in candidates:
+            target = output_type_dir / path.name
+            target.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+            entry_paths.append(
+                str((Path("fragments") / "entries" / entry_type / path.name).as_posix())
+            )
+        embedded_entries[entry_type] = entry_paths
+
+    unknown_types = sorted(
+        path.name for path in entries_root.iterdir() if path.is_dir() and path.name not in EMBEDDED_ENTRY_TYPES
+    )
+    if unknown_types:
+        warnings.append(f"[{slug}] Embedded entry types not recognized: {', '.join(unknown_types)}.")
+
+    return embedded_entries
+
+
 def _build_character_book(
     source_dir: Path,
     warnings: list[str],
@@ -303,6 +372,25 @@ def export_character_bundle(
     export_character_root = export_root / "characters" / slug
     export_character_root.mkdir(parents=True, exist_ok=True)
     created_dirs.add(export_character_root)
+    embedded_entries = _emit_embedded_entry_fragments(
+        source_dir,
+        export_character_root,
+        warnings,
+        slug,
+    )
+    base_payload = manifest_payload.get("base")
+    if not isinstance(base_payload, dict):
+        base_payload = {"fragments": {}}
+        manifest_payload["base"] = base_payload
+    fragments_payload = base_payload.get("fragments")
+    if not isinstance(fragments_payload, dict):
+        fragments_payload = {}
+        base_payload["fragments"] = fragments_payload
+    fragments_extensions = fragments_payload.get("x")
+    if not isinstance(fragments_extensions, dict):
+        fragments_extensions = {}
+        fragments_payload["x"] = fragments_extensions
+    fragments_extensions["embeddedEntries"] = embedded_entries
 
     for prose_variant in PROSE_VARIANTS:
         card_payload = _build_spec_v2_card(
@@ -350,6 +438,12 @@ def export_character_bundle(
         variant_root = export_character_root / "variants" / variant_dir.name
         variant_root.mkdir(parents=True, exist_ok=True)
         created_dirs.add(variant_root)
+        _emit_embedded_entry_fragments(
+            variant_dir,
+            variant_root,
+            warnings,
+            f"{slug}:{variant_dir.name}",
+        )
         for prose_variant in PROSE_VARIANTS:
             variant_payload = _build_spec_v2_card(
                 variant_fields,
