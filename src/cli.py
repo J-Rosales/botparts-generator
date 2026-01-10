@@ -4,6 +4,8 @@ import argparse
 import difflib
 import os
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -151,12 +153,13 @@ def _run_build(args: argparse.Namespace) -> int:
         placeholders = _parse_placeholders(placeholders_env)
     strict_env = os.environ.get("BOTPARTS_SCOPE_STRICT", "0")
     strict_scopes = args.strict_scope or strict_env == "1"
-    build_site_data(
-        Path.cwd(),
-        placeholders=placeholders,
-        include_timestamps=args.include_timestamps,
-        strict_scopes=strict_scopes,
-    )
+    with _Spinner("build"):
+        build_site_data(
+            Path.cwd(),
+            placeholders=placeholders,
+            include_timestamps=args.include_timestamps,
+            strict_scopes=strict_scopes,
+        )
     return 0
 
 
@@ -167,12 +170,13 @@ def _maybe_auto_build(args: argparse.Namespace) -> int:
     placeholders = _parse_placeholders(os.environ.get("BOTPARTS_PLACEHOLDERS"))
     strict_scopes = os.environ.get("BOTPARTS_SCOPE_STRICT", "0") == "1"
     print("Running auto-build (bp build)...")
-    build_site_data(
-        Path.cwd(),
-        placeholders=placeholders,
-        include_timestamps=False,
-        strict_scopes=strict_scopes,
-    )
+    with _Spinner("build"):
+        build_site_data(
+            Path.cwd(),
+            placeholders=placeholders,
+            include_timestamps=False,
+            strict_scopes=strict_scopes,
+        )
     print("Auto-build complete.")
     return 0
 
@@ -617,6 +621,7 @@ def _run_author_schema_file(
                     character_dir / "canonical" / "spec_v2_fields.md",
                     variant_prompt,
                     planned_variants,
+                    wait_for_edit=wait_for_edit,
                 )
                 for variant_slug, description in applied_variants:
                     variant_dir = character_dir / "variants" / variant_slug
@@ -996,6 +1001,8 @@ def _apply_variant_edits(
     canonical_path: Path,
     prompt_path: Path,
     planned_variants: list[tuple[str, str, str]],
+    *,
+    wait_for_edit: bool = True,
 ) -> list[tuple[str, str]]:
     canonical_text = canonical_path.read_text(encoding="utf-8")
     applied: list[tuple[str, str]] = []
@@ -1006,6 +1013,8 @@ def _apply_variant_edits(
 
         input_payload = _format_variant_prompt_payload(canonical_text, description)
         compiled_prompt = _compile_variant_prompt([prompt_path], canonical_text, description)
+        if not wait_for_edit:
+            print(f"Working on variant '{variant_slug}'...")
         llm_result = _invoke_llm(compiled_prompt, label=f"Variant rewrite ({variant_slug})")
         spec_path.write_text(llm_result.output_text.rstrip() + "\n", encoding="utf-8")
         run_dir = variant_dir / "runs" / authoring.build_run_id(variant_slug)
@@ -1018,10 +1027,11 @@ def _apply_variant_edits(
             output_text=llm_result.output_text,
         )
 
-        variant_rel = spec_path.relative_to(Path.cwd())
-        print(f"Edit variant draft: {variant_rel.as_posix()}")
-        authoring.try_open_in_editor(spec_path)
-        input("Press enter once draft edits are saved...")
+        if wait_for_edit:
+            variant_rel = spec_path.relative_to(Path.cwd())
+            print(f"Edit variant draft: {variant_rel.as_posix()}")
+            authoring.try_open_in_editor(spec_path)
+            input("Press enter once draft edits are saved...")
         delta_fields = authoring.load_spec_fields(spec_path)
         if not isinstance(delta_fields, dict):
             raise ValueError(f"Variant delta for '{variant_slug}' must be a JSON object.")
@@ -1084,11 +1094,39 @@ def _summarize_embedded_entries(entries_root: Path) -> str:
 
 def _invoke_llm(compiled_prompt: str, label: str = "LLM request") -> llm_client.LLMResult:
     config = llm_client.load_llm_config()
-    print(f"Loading... {label} in progress.")
-    sys.stdout.flush()
-    result = llm_client.invoke_llm(compiled_prompt, config)
+    with _Spinner(label):
+        result = llm_client.invoke_llm(compiled_prompt, config)
     print(f"{label} complete.")
     return result
+
+
+class _Spinner:
+    def __init__(self, label: str, interval: float = 0.2) -> None:
+        self._label = label
+        self._interval = interval
+        self._stop_event = threading.Event()
+        self._thread = threading.Thread(target=self._spin, daemon=True)
+        self._frames = ("|", "/", "-", "\\")
+        self._last_length = 0
+
+    def _spin(self) -> None:
+        index = 0
+        while not self._stop_event.is_set():
+            frame = self._frames[index % len(self._frames)]
+            message = f"{frame} working {self._label}"
+            self._last_length = max(self._last_length, len(message))
+            print(f"\r{message}", end="", flush=True)
+            index += 1
+            time.sleep(self._interval)
+        if self._last_length:
+            print(f"\r{' ' * self._last_length}\r", end="", flush=True)
+
+    def __enter__(self) -> None:
+        self._thread.start()
+
+    def __exit__(self, exc_type: Any, exc: BaseException | None, tb: Any) -> None:
+        self._stop_event.set()
+        self._thread.join()
 
 
 def _prompt_text(label: str, default: str | None = None) -> str:
