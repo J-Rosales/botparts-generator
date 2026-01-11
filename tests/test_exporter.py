@@ -92,10 +92,5 @@ def test_export_character_bundle_filters_system_prompt_rules(tmp_path: Path) -> 
     variant_system_prompt = json.loads(variant_payload["data"]["system_prompt"])
     rules = variant_system_prompt["conditional_rules"]
     assert rules
-    conditions = []
-    for rule in rules:
-        if isinstance(rule, dict):
-            conditions.append(rule.get("condition", ""))
-        else:
-            conditions.append(rule)
-    assert all("storm front" in condition.lower() for condition in conditions)
+    assert all(isinstance(rule, str) for rule in rules)
+    assert all(rule.startswith("This character is Storm Front.") for rule in rules)

@@ -137,6 +137,28 @@ def _conditional_rule_matches(
     return variant_slug.lower() in normalized or variant_display_name.lower() in normalized
 
 
+def _rewrite_conditional_rule(rule: Any, variant_display_name: str) -> list[Any]:
+    if isinstance(rule, dict):
+        behavior = rule.get("behavior")
+        declarative = f"This character is {variant_display_name}."
+        if isinstance(behavior, list):
+            return [f"{declarative} {str(item).strip()}".strip() for item in behavior if str(item).strip()]
+        if isinstance(behavior, str) and behavior.strip():
+            return [f"{declarative} {behavior.strip()}".strip()]
+        return [declarative]
+    if isinstance(rule, str):
+        trimmed = rule.strip()
+        if not trimmed:
+            return []
+        normalized = re.sub(
+            r"(?i)^if\s+variant\s+['\"][^'\"]+['\"]\s+(?:is\s+active|is|==|=)\s*,?\s*",
+            "",
+            trimmed,
+        )
+        return [f"This character is {variant_display_name}. {normalized}".strip()]
+    return []
+
+
 def _normalize_system_prompt(raw_prompt: str, variant_slug: str | None) -> str:
     if not raw_prompt:
         return raw_prompt
@@ -155,11 +177,15 @@ def _normalize_system_prompt(raw_prompt: str, variant_slug: str | None) -> str:
         conditional_rules = payload.get("conditional_rules")
         if isinstance(conditional_rules, list):
             display_name = authoring.variant_slug_to_display_name(variant_slug)
-            payload["conditional_rules"] = [
+            filtered = [
                 rule
                 for rule in conditional_rules
                 if _conditional_rule_matches(rule, variant_slug, display_name)
             ]
+            rewritten: list[Any] = []
+            for rule in filtered:
+                rewritten.extend(_rewrite_conditional_rule(rule, display_name))
+            payload["conditional_rules"] = rewritten
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
