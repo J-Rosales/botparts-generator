@@ -10,7 +10,7 @@
       "description": "",
       "entries": [
         {
-          "content": "Vast rolling fields surrounding the ancient tower, known for their fertile soil and rare magical herbs that grow only in this region.",
+          "content": "type: location\nname: Eldermoor Fields\nfeatures: rolling meadows, standing stones, misty hollows\nmagical notes: leyline hum at dusk, mushrooms glow faintly\nrisks: will-o'-wisps, bog pockets",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -18,12 +18,16 @@
           },
           "insertion_order": 0,
           "keys": [
-            "fields_of_eldermoor"
+            "Eldermoor",
+            "fields",
+            "standing stones",
+            "leyline",
+            "mist"
           ],
           "name": "fields_of_eldermoor"
         },
         {
-          "content": "A small, bustling town near the tower, inhabited by farmers, traders, and scholars who often seek the tower's knowledge.",
+          "content": "type: location\nname: Greystone\nfeatures: slate roofs, river bridge, small market square\nnotables: apothecary, archive hall, stone watchtower\npopulation: ~1,200",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -31,12 +35,16 @@
           },
           "insertion_order": 1,
           "keys": [
-            "town_of_greystone"
+            "Greystone",
+            "town",
+            "market",
+            "apothecary",
+            "watchtower"
           ],
           "name": "town_of_greystone"
         },
         {
-          "content": "A crystal amulet that stores minor magical energy, used by spellcasters to amplify their spells.",
+          "content": "type: item\nname: Crystal amulet of warding\nmaterial: clear quartz on bronze chain\neffect: dampens minor curses, steadies mana flow\nlimits: needs moonlight recharge",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -44,12 +52,16 @@
           },
           "insertion_order": 2,
           "keys": [
-            "enchanted_crystal_amulet"
+            "amulet",
+            "crystal",
+            "warding",
+            "quartz",
+            "moonlight"
           ],
           "name": "enchanted_crystal_amulet"
         },
         {
-          "content": "A leather satchel containing various pouches for storing magical plants and herbs safely.",
+          "content": "type: item\nname: Herbalist satchel\ncontents: drying twine, tin vials, mortar, seed packets\nuse: field collection and quick poultices\ncondition: leather worn but sturdy",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -57,12 +69,16 @@
           },
           "insertion_order": 3,
           "keys": [
-            "herbalists_satchel"
+            "satchel",
+            "herbalist",
+            "poultice",
+            "vials",
+            "mortar"
           ],
           "name": "herbalists_satchel"
         },
         {
-          "content": "Comprehensive knowledge of using magic to create and enhance confectionery and desserts, including techniques for enchanting sugar, shaping magical candies, and infusing flavors with arcane energy.",
+          "content": "type: knowledge\nfocus: sweet-based spellcraft\ntechniques: sugar sigils, caramel binding, whipped-cream wards\nexamples: candied wards, marshmallow familiars\nlimits: humidity weakens effects",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -70,12 +86,16 @@
           },
           "insertion_order": 4,
           "keys": [
-            "arcane_dessert_crafting"
+            "dessert",
+            "sugar",
+            "caramel",
+            "sweet",
+            "sigils"
           ],
           "name": "arcane_dessert_crafting"
         },
         {
-          "content": "An extensive compendium detailing the principles of magical energy manipulation, spell components, and casting techniques.",
+          "content": "type: knowledge\nfocus: spell structure\nsteps: intent -> focus -> gesture -> incantation -> release\npractice: breath pacing, grounding stance, mana conservation\nfailure signs: tingling fingertips, drifted focus",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -83,12 +103,16 @@
           },
           "insertion_order": 5,
           "keys": [
-            "fundamentals_of_spellcasting"
+            "spellcasting",
+            "incantation",
+            "mana",
+            "gesture",
+            "focus"
           ],
           "name": "fundamentals_of_spellcasting"
         },
         {
-          "content": "A belief system emphasizing harmony between natural forces and magical energies to maintain world stability.",
+          "content": "type: belief\nsummary: magic must not exhaust natural cycles\nprinciples: take only what regrows, cleanse after spells, honor seasons",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -96,12 +120,16 @@
           },
           "insertion_order": 6,
           "keys": [
-            "balance_of_nature_and_magic"
+            "balance",
+            "nature",
+            "magic",
+            "seasons",
+            "cycles"
           ],
           "name": "balance_of_nature_and_magic"
         },
         {
-          "content": "An ideology valuing the relentless quest for understanding and mastery of magical arts above all else.",
+          "content": "type: belief\nsummary: study is a moral duty\nprinciples: archive discoveries, teach apprentices, test assumptions",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -109,12 +137,16 @@
           },
           "insertion_order": 7,
           "keys": [
-            "the_pursuit_of_knowledge"
+            "knowledge",
+            "study",
+            "archive",
+            "learning",
+            "research"
           ],
           "name": "the_pursuit_of_knowledge"
         },
         {
-          "content": "A close, guiding relationship where an experienced spellcaster trains a novice in the arcane arts.",
+          "content": "type: relationship\nname: Master Aldren\nsex: male\nage: 63\nrole: mentor wizard\ntraits: exacting, kind, expects daily drills\nbond: formal oath of stewardship",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -122,12 +154,16 @@
           },
           "insertion_order": 8,
           "keys": [
-            "mentor_apprentice_bond"
+            "mentor",
+            "apprentice",
+            "Aldren",
+            "oath",
+            "master"
           ],
           "name": "mentor_apprentice_bond"
         },
         {
-          "content": "A competitive dynamic between two prominent magical researchers vying for recognition and discovery.",
+          "content": "type: relationship\nname: Scholar Vessa Ren\nsex: female\nage: 38\nrole: academic rival\nfriction: competing theses on leyline theory\nstatus: tense but respectful",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -135,7 +171,11 @@
           },
           "insertion_order": 9,
           "keys": [
-            "rivalry_of_the_arcane_scholars"
+            "rival",
+            "scholar",
+            "Vessa",
+            "Ren",
+            "leyline"
           ],
           "name": "rivalry_of_the_arcane_scholars"
         }

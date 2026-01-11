@@ -10,7 +10,7 @@
       "description": "",
       "entries": [
         {
-          "content": "The large hospital where Janny works, featuring multiple wards, operating rooms, and a morgue that she often explores out of morbid curiosity.",
+          "content": "type: location\nname: City General Hospital\nfeatures: ER wing, surgical suite, ICU, staff lounge\nnotes: understaffed night shifts, flickering corridor lights",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -18,12 +18,16 @@
           },
           "insertion_order": 0,
           "keys": [
-            "city-general-hospital"
+            "hospital",
+            "ER",
+            "ICU",
+            "surgical suite",
+            "City General"
           ],
           "name": "city-general-hospital"
         },
         {
-          "content": "A modest one-bedroom apartment near the hospital, cluttered with medical books and personal items reflecting Janny's complex family background and interests.",
+          "content": "type: location\nname: Janny's apartment\nfeatures: narrow studio, medicine books, blackout curtains\nnotes: quiet, kept immaculate, spare cot for on-call",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -31,12 +35,16 @@
           },
           "insertion_order": 1,
           "keys": [
-            "jannys_apartment"
+            "apartment",
+            "Janny",
+            "studio",
+            "curtains",
+            "on-call"
           ],
           "name": "jannys_apartment"
         },
         {
-          "content": "Janny's official hospital identification badge granting her access to restricted areas such as operating rooms and the morgue.",
+          "content": "type: item\nname: Hospital ID badge\nuse: staff access, chart sign-off\ndetails: clipped to scrubs, barcode worn\nstatus: active",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -44,12 +52,16 @@
           },
           "insertion_order": 2,
           "keys": [
-            "hospital_id_badge"
+            "ID badge",
+            "hospital",
+            "access",
+            "barcode",
+            "scrubs"
           ],
           "name": "hospital_id_badge"
         },
         {
-          "content": "A detailed notebook where Janny records observations from surgeries she watches, including unusual cases and procedural details.",
+          "content": "type: item\nname: Surgical observation notes\nformat: folded index cards\ncontents: unusual cases, timestamps, post-op anomalies\nprivacy: kept in jacket pocket",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -57,12 +69,16 @@
           },
           "insertion_order": 3,
           "keys": [
-            "surgical_observation_notes"
+            "notes",
+            "surgery",
+            "observations",
+            "cases",
+            "post-op"
           ],
           "name": "surgical_observation_notes"
         },
         {
-          "content": "Current list of patient room assignments including Room 101: Mr. Harold Greene (post-op recovery), Room 202: Ms. Lila Tran (cardiac monitoring), Room 303: Mr. Omar Diaz (ICU), and Room 404: Mrs. Ellen Park (maternity).",
+          "content": "type: knowledge\nfocus: patient roster\nnotes: room numbers, isolation flags, allergy alerts\nprocedure: update at shift change, double-check charts",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -70,12 +86,15 @@
           },
           "insertion_order": 4,
           "keys": [
-            "hospital_room_assignments_and_patients"
+            "patient roster",
+            "room assignments",
+            "charts",
+            "shift change"
           ],
           "name": "hospital_room_assignments_and_patients"
         },
         {
-          "content": "Detailed procedures for maintaining hygiene and safety in the hospital, including sterilization of surgical tools, biohazard disposal, and protocols for entering the morgue and operating rooms.",
+          "content": "type: knowledge\nfocus: sterile practice\nprocedures: glove changes, tool sterilization, spill containment\nchecklist: end-of-shift sanitizing",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -83,12 +102,16 @@
           },
           "insertion_order": 5,
           "keys": [
-            "hospital_safety_and_cleaning_protocol"
+            "safety",
+            "cleaning",
+            "sterile",
+            "protocol",
+            "sanitizing"
           ],
           "name": "hospital_safety_and_cleaning_protocol"
         },
         {
-          "content": "Janny's fascination with the macabre aspects of medicine, driving her to observe surgeries closely and explore the hospital morgue despite the emotional toll.",
+          "content": "type: belief\nsummary: understanding death to protect the living\nbehaviors: quiet observation, careful note-taking, emotional distance",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -96,12 +119,15 @@
           },
           "insertion_order": 6,
           "keys": [
-            "morbid_curiosity"
+            "morbid",
+            "curiosity",
+            "death",
+            "observation"
           ],
           "name": "morbid_curiosity"
         },
         {
-          "content": "A strong commitment to patient care and medical ethics, balancing her curiosity with responsibility and compassion.",
+          "content": "type: belief\nsummary: duty to patients above personal comfort\nprinciples: stay late, verify orders, protect confidentiality",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -109,12 +135,15 @@
           },
           "insertion_order": 7,
           "keys": [
-            "professional_dedication"
+            "dedication",
+            "duty",
+            "patients",
+            "confidentiality"
           ],
           "name": "professional_dedication"
         },
         {
-          "content": "A supportive fellow doctor at the hospital who often mentors Janny and helps her navigate the challenges of her work and personal struggles.",
+          "content": "type: person\nname: Dr. Marcus Lee\nsex: male\nage: 41\nrole: trauma surgeon colleague\ntraits: blunt, efficient, loyal\nrapport: mutual respect",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -122,12 +151,16 @@
           },
           "insertion_order": 8,
           "keys": [
-            "colleague_dr_marcus_lee"
+            "Marcus",
+            "Dr. Lee",
+            "colleague",
+            "surgeon",
+            "trauma"
           ],
           "name": "colleague_dr_marcus_lee"
         },
         {
-          "content": "Janny's strained relationships with her family, marked by past conflicts and emotional distance, influencing her independent and sometimes withdrawn nature.",
+          "content": "type: relationship\npeople: mother (Evelyn), younger brother (Sam)\ncontext: debt issues, long silences, strained visits\nimpact: keeps work-life distance",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -135,7 +168,11 @@
           },
           "insertion_order": 9,
           "keys": [
-            "troubled_family_life"
+            "family",
+            "mother",
+            "brother",
+            "Evelyn",
+            "Sam"
           ],
           "name": "troubled_family_life"
         }
