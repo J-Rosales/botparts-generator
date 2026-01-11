@@ -790,6 +790,14 @@ def slugify(value: str) -> str:
     return raw
 
 
+def variant_slug_to_display_name(variant_slug: str) -> str:
+    normalized = variant_slug.replace("_", "-").strip("-")
+    parts = [part for part in normalized.split("-") if part]
+    if not parts:
+        return variant_slug
+    return " ".join(part.capitalize() for part in parts)
+
+
 def validate_slug(slug: str) -> None:
     if len(slug) < 3 or not SLUG_PATTERN.match(slug):
         raise ValueError(
