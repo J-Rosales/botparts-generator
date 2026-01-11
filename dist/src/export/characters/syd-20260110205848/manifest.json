@@ -1,0 +1,67 @@
+{
+  "base": {
+    "fragments": {
+      "x": {
+        "embeddedEntries": {
+          "ideology": [
+            "fragments/entries/ideology/resilience_through_nurturing.md",
+            "fragments/entries/ideology/value_of_hard_work.md"
+          ],
+          "items": [
+            "fragments/entries/items/handwritten_journal.md",
+            "fragments/entries/items/rusty_garden_trowel.md"
+          ],
+          "knowledge": [
+            "fragments/entries/knowledge/catalogue_of_gardening_knowledge.md",
+            "fragments/entries/knowledge/childhood_memories_orphanage_and_nun.md"
+          ],
+          "locations": [
+            "fragments/entries/locations/old_garden_plot.md",
+            "fragments/entries/locations/st-agnes-orphanage.md"
+          ],
+          "relationships": [
+            "fragments/entries/relationships/painful_childhood_memory.md",
+            "fragments/entries/relationships/the_nun_sister_mary.md"
+          ]
+        }
+      }
+    }
+  },
+  "description": "A young apprentice gardener and healer who tends the magical plants within an ancient wizard's tower, bridging the natural world and arcane sorcery with her nascent gifts.",
+  "modules": [],
+  "name": "Syd",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/unknown"
+    }
+  },
+  "redistributeAllowed": "unknown",
+  "slug": "syd-20260110205848",
+  "tags": [
+    "fantasy",
+    "apprentice",
+    "gardener",
+    "magic",
+    "mentor",
+    "healer",
+    "wizard tower",
+    "nature",
+    "growth"
+  ],
+  "transforms": [],
+  "x": {
+    "aiTokens": null,
+    "placeholder": false,
+    "proseVariants": [
+      "schema-like",
+      "hybrid"
+    ],
+    "shortDescription": "Syd is a tentative yet earnest apprentice gardener and healer nurturing magical plants within an ancient wizard's tower while forging a fragile alliance with her mentor.",
+    "spoilerTags": [],
+    "uploadDate": "",
+    "variantSlugs": [
+      "royal",
+      "uncouth"
+    ]
+  }
+}

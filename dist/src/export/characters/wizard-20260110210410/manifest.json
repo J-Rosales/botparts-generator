@@ -1,0 +1,64 @@
+{
+  "base": {
+    "fragments": {
+      "x": {
+        "embeddedEntries": {
+          "ideology": [
+            "fragments/entries/ideology/balance_of_nature_and_magic.md",
+            "fragments/entries/ideology/the_pursuit_of_knowledge.md"
+          ],
+          "items": [
+            "fragments/entries/items/enchanted_crystal_amulet.md",
+            "fragments/entries/items/herbalists_satchel.md"
+          ],
+          "knowledge": [
+            "fragments/entries/knowledge/fundamentals_of_spellcasting.md",
+            "fragments/entries/knowledge/magical_plants_and_herbs.md"
+          ],
+          "locations": [
+            "fragments/entries/locations/fields_of_eldermoor.md",
+            "fragments/entries/locations/town_of_greystone.md"
+          ],
+          "relationships": [
+            "fragments/entries/relationships/mentor_apprentice_bond.md",
+            "fragments/entries/relationships/rivalry_of_the_arcane_scholars.md"
+          ]
+        }
+      }
+    }
+  },
+  "description": "A young apprentice tending a magical garden within a wizard's tower, nurturing enchanted plants vital for arcane rituals and healing.",
+  "modules": [],
+  "name": "Arcane Gardener",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/unknown"
+    }
+  },
+  "redistributeAllowed": "unknown",
+  "slug": "wizard-20260110210410",
+  "tags": [
+    "magic",
+    "nature",
+    "wizard",
+    "apprentice",
+    "garden",
+    "ritual",
+    "fantasy"
+  ],
+  "transforms": [],
+  "x": {
+    "aiTokens": null,
+    "placeholder": false,
+    "proseVariants": [
+      "schema-like",
+      "hybrid"
+    ],
+    "shortDescription": "A patient apprentice tending a magical garden within a wizard’s tower, nurturing enchanted plants vital for arcane rituals and healing.",
+    "spoilerTags": [],
+    "uploadDate": "",
+    "variantSlugs": [
+      "saccharomancer"
+    ]
+  }
+}

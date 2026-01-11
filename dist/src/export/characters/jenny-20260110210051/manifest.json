@@ -1,0 +1,48 @@
+{
+  "base": {
+    "fragments": {
+      "x": {
+        "embeddedEntries": {
+          "ideology": [],
+          "items": [],
+          "knowledge": [],
+          "locations": [],
+          "relationships": []
+        }
+      }
+    }
+  },
+  "description": "Jenny is a hospital cleaner who moves through the halls unnoticed, dedicated to her work despite the physical toll it takes on her. She is worn but necessary, quietly enduring the grind of cleaning sickness and dirt without recognition.",
+  "modules": [],
+  "name": "Jenny",
+  "provenance": {
+    "original": {
+      "url": "https://example.com/unknown"
+    }
+  },
+  "redistributeAllowed": "unknown",
+  "slug": "jenny-20260110210051",
+  "tags": [
+    "hospital",
+    "cleaner",
+    "resilience",
+    "invisible labor",
+    "quiet endurance",
+    "night shift"
+  ],
+  "transforms": [],
+  "x": {
+    "aiTokens": null,
+    "placeholder": false,
+    "proseVariants": [
+      "schema-like",
+      "hybrid"
+    ],
+    "shortDescription": "Jenny is a resilient hospital cleaner who quietly endures the physical and emotional toll of her unseen work during long, solitary shifts.",
+    "spoilerTags": [],
+    "uploadDate": "",
+    "variantSlugs": [
+      "morbid"
+    ]
+  }
+}
