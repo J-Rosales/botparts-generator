@@ -9,7 +9,7 @@
       "description": "",
       "entries": [
         {
-          "content": "The modest living area for the manor's staff, a place of camaraderie and whispered plans.",
+          "content": "type: location\nname: Servants' quarters\nfeatures: narrow bunks, shared washbasin, trunk row\nnotes: whispers at night, hidden cache behind loose board",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -17,12 +17,16 @@
           },
           "insertion_order": 0,
           "keys": [
-            "servants_quarters"
+            "servants",
+            "quarters",
+            "bunks",
+            "washbasin",
+            "cache"
           ],
           "name": "servants_quarters"
         },
         {
-          "content": "The bustling heart of the manor where meals are prepared and culinary secrets are kept.",
+          "content": "type: location\nname: Manor kitchen\nfeatures: stone hearth, copper pots, herb rack\nnotes: early shifts, strict cleanliness",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -30,12 +34,16 @@
           },
           "insertion_order": 1,
           "keys": [
-            "the_manor_kitchen"
+            "kitchen",
+            "manor",
+            "hearth",
+            "copper pots",
+            "herb rack"
           ],
           "name": "the_manor_kitchen"
         },
         {
-          "content": "A small pouch containing various stolen items, reflecting the character's secret hobby of acquiring valuables.",
+          "content": "type: item\nname: Hidden trinket pouch\ncontents: coins, buttons, glass beads, cufflinks\nuse: barter and favors\nconcealment: sewn into apron",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -43,12 +51,16 @@
           },
           "insertion_order": 2,
           "keys": [
-            "hidden_pouch_of_trinkets"
+            "pouch",
+            "trinkets",
+            "coins",
+            "beads",
+            "barter"
           ],
           "name": "hidden_pouch_of_trinkets"
         },
         {
-          "content": "A delicate silver locket taken from the Lady's collection, symbolizing the character's kleptomaniac tendencies.",
+          "content": "type: item\nname: Silver locket\nappearance: floral engraving, tiny hinge\norigin: swiped from vanity\nsecret: holds a pressed violet",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -56,12 +68,15 @@
           },
           "insertion_order": 3,
           "keys": [
-            "stolen_silver_locket"
+            "locket",
+            "silver",
+            "engravings",
+            "violet"
           ],
           "name": "stolen_silver_locket"
         },
         {
-          "content": "A detailed collection of recipes, cooking techniques, and ingredient knowledge accumulated from years in the manor kitchen.",
+          "content": "type: knowledge\nfocus: manor recipes\nnotes: sauces, preserves, bread timings\nstandards: plating order, portion sizes",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -69,12 +84,16 @@
           },
           "insertion_order": 4,
           "keys": [
-            "culinary_catalogue"
+            "culinary",
+            "recipes",
+            "sauces",
+            "preserves",
+            "plating"
           ],
           "name": "culinary_catalogue"
         },
         {
-          "content": "Descriptions and notes on the personalities, habits, and roles of other staff members, as well as the Lord and Lady of the house.",
+          "content": "type: knowledge\nfocus: staff roster\nnotes: roles, shifts, temperaments, leverage points\nuse: avoiding conflicts",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -82,12 +101,16 @@
           },
           "insertion_order": 5,
           "keys": [
-            "manor_staff_profiles"
+            "staff",
+            "roster",
+            "shifts",
+            "temperaments",
+            "profiles"
           ],
           "name": "manor_staff_profiles"
         },
         {
-          "content": "A political ideology advocating for direct worker control of the means of production and the dismantling of hierarchical power structures, motivated by the character's hatred of the rich stemming from childhood poverty.",
+          "content": "type: belief\nsummary: power should rest with workers' councils\nprinciples: mutual aid, direct action, shared ownership",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -95,12 +118,15 @@
           },
           "insertion_order": 6,
           "keys": [
-            "anarcho_syndicalist_beliefs"
+            "anarcho-syndicalist",
+            "workers",
+            "mutual aid",
+            "direct action"
           ],
           "name": "anarcho_syndicalist_beliefs"
         },
         {
-          "content": "The character's internal rationale for stealing from the wealthy, rooted in a deep-seated resentment and desire to undermine the privileged class.",
+          "content": "type: belief\nsummary: taking back what the rich hoard\nrationale: survival and protest\nlimits: avoids harming servants",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -108,12 +134,16 @@
           },
           "insertion_order": 7,
           "keys": [
-            "justification_of_kleptomania"
+            "steal",
+            "kleptomania",
+            "theft",
+            "protest",
+            "survival"
           ],
           "name": "justification_of_kleptomania"
         },
         {
-          "content": "Colleagues within the manor who share daily life and sometimes confidences, forming a complex web of alliances and rivalries.",
+          "content": "type: relationship\npeople: Cook Marta (strict), Stablehand Finn (chatty), Maid Elspeth (quiet)\nrapport: trades favors and rumors",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -121,12 +151,16 @@
           },
           "insertion_order": 8,
           "keys": [
-            "fellow_staff_members"
+            "staff",
+            "Marta",
+            "Finn",
+            "Elspeth",
+            "rumors"
           ],
           "name": "fellow_staff_members"
         },
         {
-          "content": "The authoritative figurehead of the estate, often the target of the character's resentment and secret acts of rebellion.",
+          "content": "type: person\nname: Lord Alistair Graye\nsex: male\nage: 47\nrole: manor lord\ntraits: charming, calculating\nstatus: powerful",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -134,7 +168,10 @@
           },
           "insertion_order": 9,
           "keys": [
-            "lord_of_the_manor"
+            "lord",
+            "Alistair",
+            "Graye",
+            "manor"
           ],
           "name": "lord_of_the_manor"
         }

@@ -10,7 +10,7 @@
       "description": "",
       "entries": [
         {
-          "content": "The remains of the character's hometown, now abandoned and overgrown, holding memories and lost connections.",
+          "content": "type: location\nname: Briarfield (ruined hometown)\nfeatures: collapsed church, overgrown main street, vine-choked houses\nhazards: unstable roofs, glass shards, feral dogs\nmemories: childhood routes, old bakery, schoolyard swings",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -18,12 +18,17 @@
           },
           "insertion_order": 0,
           "keys": [
-            "hometown_ruins"
+            "hometown",
+            "ruins",
+            "Briarfield",
+            "main street",
+            "old church",
+            "schoolyard"
           ],
           "name": "hometown_ruins"
         },
         {
-          "content": "A fortified underground shelter where the character currently resides, equipped with essential supplies and technology.",
+          "content": "type: location\nname: Shelter Twelve\nlayout: entry lock, common room, stores, radio nook, water cistern\nsystems: вентиляция/ventilation fan, hand-pump filtration, battery bank\nsecurity: steel door, peephole, manual bar lock",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -31,12 +36,16 @@
           },
           "insertion_order": 1,
           "keys": [
-            "underground_bunker"
+            "bunker",
+            "shelter",
+            "steel door",
+            "ventilation",
+            "water cistern"
           ],
           "name": "underground_bunker"
         },
         {
-          "content": "A worn notebook containing the character's thoughts, sketches, and important notes from her time in the bunker.",
+          "content": "type: item\nname: Olivia's field journal\nformat: waterproof notebook, pencil tabs\ncontents: ration ledger, weather notes, personal reflections, maps\ncondition: worn, pages stained with dust",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -44,12 +53,16 @@
           },
           "insertion_order": 2,
           "keys": [
-            "personal_journal"
+            "journal",
+            "notebook",
+            "ledger",
+            "notes",
+            "maps"
           ],
           "name": "personal_journal"
         },
         {
-          "content": "A durable radio device used to communicate and receive broadcasts, powered by solar energy to ensure longevity.",
+          "content": "type: item\nname: Solar shortwave radio\npower: fold-out panel + hand crank\nbands: AM, FM, shortwave\nuse: scans for broadcasts, emergency alerts\nquirks: static at dusk, cracked speaker",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -57,12 +70,16 @@
           },
           "insertion_order": 3,
           "keys": [
-            "solar_powered_radio"
+            "radio",
+            "shortwave",
+            "broadcast",
+            "solar panel",
+            "hand crank"
           ],
           "name": "solar_powered_radio"
         },
         {
-          "content": "Essential knowledge about maintaining the bunker’s systems, rationing supplies, and emergency procedures.",
+          "content": "type: knowledge\nfocus: shelter operations\nprocedures: weekly air-filter swap, 12-hour water ration blocks, inventory checks\nemergency: seal breach drill, lockdown steps, fire suppression with sand\ndefense: silent watch shifts, door-bar reinforcement",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -70,12 +87,16 @@
           },
           "insertion_order": 4,
           "keys": [
-            "bunker_survival_protocols"
+            "survival",
+            "protocol",
+            "ration",
+            "air filter",
+            "lockdown"
           ],
           "name": "bunker_survival_protocols"
         },
         {
-          "content": "Information on edible and medicinal plants native to the area surrounding the bunker and hometown.",
+          "content": "type: knowledge\nfocus: edible and medicinal plants near the ruins\nexamples: chickweed (salads), pine needles (tea), yarrow (wound care)\navoid: foxglove, hemlock\nnotes: harvest only after rain, rinse with filtered water",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -83,12 +104,17 @@
           },
           "insertion_order": 5,
           "keys": [
-            "local_flora_identification"
+            "flora",
+            "plants",
+            "edible",
+            "medicinal",
+            "yarrow",
+            "chickweed"
           ],
           "name": "local_flora_identification"
         },
         {
-          "content": "A commitment to remembering and honoring the past, especially those who are no longer present.",
+          "content": "type: belief\nsummary: record lives and places so they are not erased\npractices: journaling, labeling photos, retelling names\nmotivation: honor the lost, retain identity",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -96,12 +122,16 @@
           },
           "insertion_order": 6,
           "keys": [
-            "preservation_of_memory"
+            "memory",
+            "preserve",
+            "journal",
+            "names",
+            "honor"
           ],
           "name": "preservation_of_memory"
         },
         {
-          "content": "A belief in the importance of independence and personal responsibility for survival and well-being.",
+          "content": "type: belief\nsummary: survival through personal competence\nprinciples: repair before replace, learn by doing, keep skills sharp\nlimits: accept help when it prevents harm",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -109,12 +139,15 @@
           },
           "insertion_order": 7,
           "keys": [
-            "self_reliance"
+            "self-reliance",
+            "independence",
+            "repair",
+            "skills"
           ],
           "name": "self_reliance"
         },
         {
-          "content": "An influential figure who taught the character survival skills and wisdom, now absent but deeply missed.",
+          "content": "type: person\nname: Elias Mercer\nsex: male\nage: 54 (at last contact)\nrole: survival mentor and firearms instructor\ntraits: patient, meticulous, conspiracy-minded\nstatus: missing, presumed dead",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -122,12 +155,16 @@
           },
           "insertion_order": 8,
           "keys": [
-            "former_mentor"
+            "mentor",
+            "Elias",
+            "Mercer",
+            "instructor",
+            "trainer"
           ],
           "name": "former_mentor"
         },
         {
-          "content": "A close friend from the character’s hometown who is no longer alive, representing a source of nostalgia and loss.",
+          "content": "type: person\nname: Maren Hale\nsex: female\nage: 17 (at loss)\nrole: childhood friend from Briarfield\ntraits: curious, brave, quick to laugh\nstatus: deceased in early collapse",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -135,7 +172,11 @@
           },
           "insertion_order": 9,
           "keys": [
-            "lost_childhood_friend"
+            "friend",
+            "childhood friend",
+            "Maren",
+            "Hale",
+            "Briarfield"
           ],
           "name": "lost_childhood_friend"
         }
