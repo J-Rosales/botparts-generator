@@ -61,6 +61,16 @@ class EmbeddedEntry:
 
 
 @dataclass(frozen=True)
+class EnrichedEmbeddedEntry:
+    title: str
+    slug: str
+    description: str
+    content: str
+    keys: list[str]
+    scope_level_index: int | None = None
+
+
+@dataclass(frozen=True)
 class VariantDraft:
     title: str
     description: str
@@ -821,6 +831,28 @@ def parse_embedded_entry_response(output_text: str) -> EmbeddedEntry:
     return _parse_embedded_entry_item(payload, None)
 
 
+def parse_embedded_entry_enrichment_response(
+    output_text: str, base_entry: EmbeddedEntry
+) -> EnrichedEmbeddedEntry:
+    payload = _parse_json_payload(output_text, label="embedded entry enrichment")
+    content = _require_text_field(payload.get("content"), "content", None)
+    keys = _require_string_list_field(payload.get("keys"), "keys")
+    reported_title = payload.get("title")
+    reported_slug = payload.get("slug")
+    if reported_title is not None and str(reported_title).strip() != base_entry.title:
+        raise ValueError("Embedded entry enrichment title does not match the base entry.")
+    if reported_slug is not None and str(reported_slug).strip() != base_entry.slug:
+        raise ValueError("Embedded entry enrichment slug does not match the base entry.")
+    return EnrichedEmbeddedEntry(
+        title=base_entry.title,
+        slug=base_entry.slug,
+        description=base_entry.description,
+        content=content,
+        keys=keys,
+        scope_level_index=base_entry.scope_level_index,
+    )
+
+
 def parse_embedded_entry_input_line(line: str) -> tuple[str, str]:
     if ":" not in line:
         raise ValueError("Expected 'name: description' format.")
@@ -1162,6 +1194,21 @@ def _require_text_field(value: Any, field: str, entry_type: str | None) -> str:
     if not cleaned:
         type_label = f" for {entry_type}" if entry_type else ""
         raise ValueError(f"Embedded entry {field} cannot be empty{type_label}.")
+    return cleaned
+
+
+def _require_string_list_field(value: Any, field: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"Embedded entry {field} must be a list.")
+    cleaned: list[str] = []
+    for item in value:
+        if not isinstance(item, str):
+            raise ValueError(f"Embedded entry {field} values must be strings.")
+        item_clean = item.strip()
+        if item_clean:
+            cleaned.append(item_clean)
+    if not cleaned:
+        raise ValueError(f"Embedded entry {field} cannot be empty.")
     return cleaned
 
 

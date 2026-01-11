@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import os
 import sys
 import threading
@@ -1179,6 +1180,7 @@ def _prompt_embedded_entries_auto(
     run_dir: Path,
 ) -> None:
     prompt_path = _select_prompt(prompts_root, "embedded_entries_auto")
+    enrich_prompt_path = _select_prompt(prompts_root, "embedded_entries_enrich")
     input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
     compiled_prompt = _compile_prompt([prompt_path], input_payload, "ENTRY TYPES")
     llm_result = _invoke_llm(compiled_prompt, label="Embedded entries (auto)")
@@ -1207,14 +1209,17 @@ def _prompt_embedded_entries_auto(
         )
         return
     for entry_type, entry in selected:
+        enriched = _enrich_embedded_entry(entry, entry_type, enrich_prompt_path, run_dir)
         frontmatter = {"title": entry.title}
+        if enriched is not None:
+            frontmatter["keys"] = json.dumps(enriched.keys, ensure_ascii=False)
         if entry.scope_level_index is not None:
             frontmatter["scopeLevelIndex"] = entry.scope_level_index
         authoring.write_embedded_entry(
             character_dir,
             entry_type=entry_type,
             entry_slug=entry.slug,
-            body=entry.description,
+            body=enriched.content if enriched is not None else entry.description,
             frontmatter=frontmatter,
         )
 
@@ -1225,6 +1230,7 @@ def _prompt_embedded_entries_from_input(
     run_dir: Path,
 ) -> None:
     prompt_path = _select_prompt(prompts_root, "embedded_entries_from_input")
+    enrich_prompt_path = _select_prompt(prompts_root, "embedded_entries_enrich")
     for entry_type in EMBEDDED_ENTRY_TYPES:
         print(f"\nEnter {entry_type} entries (name: description).")
         print("Type CONTINUE to skip an entry prompt, NEXT to move to the next entry type.")
@@ -1271,14 +1277,17 @@ def _prompt_embedded_entries_from_input(
             entries.append(entry)
         entries_sorted = sorted(entries, key=lambda entry: entry.slug)
         for entry in entries_sorted:
+            enriched = _enrich_embedded_entry(entry, entry_type, enrich_prompt_path, run_dir)
             frontmatter = {"title": entry.title}
+            if enriched is not None:
+                frontmatter["keys"] = json.dumps(enriched.keys, ensure_ascii=False)
             if entry.scope_level_index is not None:
                 frontmatter["scopeLevelIndex"] = entry.scope_level_index
             authoring.write_embedded_entry(
                 character_dir,
                 entry_type=entry_type,
                 entry_slug=entry.slug,
-                body=entry.description,
+                body=enriched.content if enriched is not None else entry.description,
                 frontmatter=frontmatter,
             )
 
@@ -1400,6 +1409,37 @@ def _format_embedded_entries_input_payload(entry_type: str, name: str, descripti
     return f"Entry type: {entry_type}\nName: {name}\nDescription: {description}"
 
 
+def _format_embedded_entries_enrich_payload(entry_type: str, entry: authoring.EmbeddedEntry) -> str:
+    return (
+        f"Entry type: {entry_type}\nTitle: {entry.title}\nSlug: {entry.slug}\n"
+        f"Description: {entry.description}"
+    )
+
+
+def _enrich_embedded_entry(
+    entry: authoring.EmbeddedEntry,
+    entry_type: str,
+    prompt_path: Path,
+    run_dir: Path,
+) -> authoring.EnrichedEmbeddedEntry | None:
+    input_payload = _format_embedded_entries_enrich_payload(entry_type, entry)
+    compiled_prompt = _compile_prompt([prompt_path], input_payload, "EMBEDDED ENTRY")
+    llm_result = _invoke_llm(compiled_prompt, label="Embedded entry enrichment")
+    log_path = run_dir / "embedded_entries_enrich" / entry_type / f"{entry.slug}.md"
+    authoring.write_embedded_entries_log(
+        log_path,
+        prompt_compiled=compiled_prompt,
+        output_text=llm_result.output_text,
+        model_info=llm_result.model_info,
+        input_payload=input_payload,
+    )
+    try:
+        return authoring.parse_embedded_entry_enrichment_response(llm_result.output_text, entry)
+    except ValueError as exc:
+        print(f"Embedded entry enrichment failed: {exc}", file=sys.stderr)
+        return None
+
+
 def _build_schema_elaboration_input(draft: authoring.MinimalStagingDraft) -> str:
     if draft.elaborate_notes:
         return f"{draft.concept}\n\nELABORATION NOTES:\n{draft.elaborate_notes}"
@@ -1446,6 +1486,7 @@ def _generate_embedded_entries_from_notes(
     embedded_entries: str | None = None,
 ) -> None:
     prompt_path = _resolve_embedded_entries_prompt(prompts_root)
+    enrich_prompt_path = _resolve_embedded_entries_enrich_prompt(prompts_root)
     input_payload = _format_embedded_entries_auto_payload(EMBEDDED_ENTRY_TYPES, EMBEDDED_ENTRY_MAX)
     if notes.strip():
         input_payload = f"{input_payload}\n\nNOTES:\n{notes.strip()}\n"
@@ -1482,14 +1523,17 @@ def _generate_embedded_entries_from_notes(
         return
     (target_dir / "fragments").mkdir(parents=True, exist_ok=True)
     for entry_type, entry in selected:
+        enriched = _enrich_embedded_entry(entry, entry_type, enrich_prompt_path, run_dir)
         frontmatter = {"title": entry.title}
+        if enriched is not None:
+            frontmatter["keys"] = json.dumps(enriched.keys, ensure_ascii=False)
         if entry.scope_level_index is not None:
             frontmatter["scopeLevelIndex"] = entry.scope_level_index
         authoring.write_embedded_entry(
             target_dir,
             entry_type=entry_type,
             entry_slug=entry.slug,
-            body=entry.description,
+            body=enriched.content if enriched is not None else entry.description,
             frontmatter=frontmatter,
         )
 
@@ -1498,6 +1542,13 @@ def _resolve_embedded_entries_prompt(prompts_root: Path) -> Path:
     templates = authoring.list_prompt_templates(prompts_root, "embedded_entries_auto")
     if not templates:
         raise FileNotFoundError(f"No prompts found in {prompts_root / 'embedded_entries_auto'}")
+    return templates[0]
+
+
+def _resolve_embedded_entries_enrich_prompt(prompts_root: Path) -> Path:
+    templates = authoring.list_prompt_templates(prompts_root, "embedded_entries_enrich")
+    if not templates:
+        raise FileNotFoundError(f"No prompts found in {prompts_root / 'embedded_entries_enrich'}")
     return templates[0]
 
 

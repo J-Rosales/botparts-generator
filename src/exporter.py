@@ -86,6 +86,25 @@ def _load_scope_sidecar(path: Path, warnings: list[str], context: str) -> str | 
     return _normalize_scope(payload.get("scope"), warnings, context)
 
 
+def _load_keys_sidecar(path: Path, warnings: list[str], context: str) -> list[str] | None:
+    sidecar_path = path.with_name(path.name + ".keys.json")
+    if not sidecar_path.exists():
+        return None
+    try:
+        payload = _load_json(sidecar_path)
+    except json.JSONDecodeError:
+        warnings.append(f"[{context}] Invalid JSON in keys sidecar {sidecar_path.name}.")
+        return None
+    if not isinstance(payload, list):
+        warnings.append(f"[{context}] Keys sidecar {sidecar_path.name} must be a list.")
+        return None
+    keys = _coerce_string_list(payload)
+    if not keys:
+        warnings.append(f"[{context}] Keys sidecar {sidecar_path.name} is empty.")
+        return None
+    return keys
+
+
 def _coerce_string(value: Any) -> str:
     if value is None:
         return ""
@@ -98,6 +117,26 @@ def _coerce_string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item).strip()]
     return []
+
+
+def _parse_keys(value: str, warnings: list[str], context: str) -> list[str]:
+    raw = value.strip()
+    if not raw:
+        return []
+    if raw.startswith("[") and raw.endswith("]"):
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            warnings.append(f"[{context}] Invalid JSON array in keys frontmatter.")
+            return []
+        keys = _coerce_string_list(payload)
+        if not keys:
+            warnings.append(f"[{context}] Keys frontmatter is empty.")
+        return keys
+    keys = [item.strip() for item in raw.split(",") if item.strip()]
+    if not keys:
+        warnings.append(f"[{context}] Keys frontmatter is empty.")
+    return keys
 
 
 def _emit_embedded_entry_fragments(
@@ -206,13 +245,21 @@ def _build_character_book(
                     f"({frontmatter_scope} -> {sidecar_scope})."
                 )
             scope = sidecar_scope or frontmatter_scope or "character"
+            sidecar_keys = _load_keys_sidecar(path, warnings, slug)
+            frontmatter_keys = _parse_keys(frontmatter.get("keys", ""), warnings, slug)
+            if sidecar_keys and frontmatter_keys and sidecar_keys != frontmatter_keys:
+                warnings.append(
+                    f"[{slug}] Keys sidecar overrides frontmatter for {path.name} "
+                    f"({frontmatter_keys} -> {sidecar_keys})."
+                )
             content = body.strip()
             if not content:
                 warnings.append(f"[{slug}] Embedded entry '{entry_type}/{path.name}' is empty; skipping.")
                 continue
             entry_slug = path.stem
+            keys = sidecar_keys or frontmatter_keys or [entry_slug]
             entry = {
-                "keys": [entry_slug],
+                "keys": keys,
                 "content": content,
                 "extensions": {"entryType": entry_type},
                 "enabled": True,
