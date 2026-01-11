@@ -9,7 +9,7 @@
       "description": "",
       "entries": [
         {
-          "content": "A secluded room in the manor reserved for the lord's personal use, often where secret meetings occur.",
+          "content": "type: location\nname: Lord's private study\nfeatures: walnut desk, locked cabinet, hunting trophies\nnotes: off-limits, smells of ink and brandy",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -17,12 +17,16 @@
           },
           "insertion_order": 0,
           "keys": [
-            "lords_private_study"
+            "study",
+            "lord",
+            "desk",
+            "locked cabinet",
+            "brandy"
           ],
           "name": "lords_private_study"
         },
         {
-          "content": "The bustling heart of the manor where Lydia prepares meals and manages the culinary staff.",
+          "content": "type: location\nname: Manor kitchen\nfeatures: stone hearth, copper pots, herb rack\nnotes: early shifts, strict cleanliness",
           "enabled": true,
           "extensions": {
             "entryType": "locations",
@@ -30,12 +34,16 @@
           },
           "insertion_order": 1,
           "keys": [
-            "manor_kitchen"
+            "kitchen",
+            "manor",
+            "hearth",
+            "copper pots",
+            "herb rack"
           ],
           "name": "manor_kitchen"
         },
         {
-          "content": "A secret assortment of preserved insects Lydia has collected and catalogued as a private hobby.",
+          "content": "type: item\nname: Entomology case\ncontents: pinned beetles, moths, label cards\nowner: the lady of the manor\nstatus: handled with gloves",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -43,12 +51,16 @@
           },
           "insertion_order": 2,
           "keys": [
-            "entomology_collection"
+            "entomology",
+            "insects",
+            "beetles",
+            "moths",
+            "collection"
           ],
           "name": "entomology_collection"
         },
         {
-          "content": "An ornate tray used by Lydia to serve meals to the lord and lady, symbolizing her role in the household.",
+          "content": "type: item\nname: Silver serving tray\nuse: formal dinners and tea service\ncondition: polished daily, heavy in hand",
           "enabled": true,
           "extensions": {
             "entryType": "items",
@@ -56,12 +68,15 @@
           },
           "insertion_order": 3,
           "keys": [
-            "silver_serving_tray"
+            "serving tray",
+            "silver",
+            "tea service",
+            "dinner"
           ],
           "name": "silver_serving_tray"
         },
         {
-          "content": "A detailed record of recipes, cooking techniques, and ingredient knowledge Lydia uses to manage the manor's meals.",
+          "content": "type: knowledge\nfocus: manor recipes\nnotes: sauces, preserves, bread timings\nstandards: plating order, portion sizes",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -69,12 +84,16 @@
           },
           "insertion_order": 4,
           "keys": [
-            "culinary_catalogue"
+            "culinary",
+            "recipes",
+            "sauces",
+            "preserves",
+            "plating"
           ],
           "name": "culinary_catalogue"
         },
         {
-          "content": "Information about other manor staff members, including their roles, personalities, and relationships within the household.",
+          "content": "type: knowledge\nfocus: staff roster\nnotes: roles, shifts, temperaments, leverage points\nuse: avoiding conflicts",
           "enabled": true,
           "extensions": {
             "entryType": "knowledge",
@@ -82,12 +101,16 @@
           },
           "insertion_order": 5,
           "keys": [
-            "staff_profiles"
+            "staff",
+            "roster",
+            "shifts",
+            "temperaments",
+            "profiles"
           ],
           "name": "staff_profiles"
         },
         {
-          "content": "An ideology valuing secrecy and careful behavior to maintain the delicate balance of the household's social dynamics.",
+          "content": "type: belief\nsummary: secrets keep employment and safety\nprinciples: say less, watch more, never write names",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -95,12 +118,15 @@
           },
           "insertion_order": 6,
           "keys": [
-            "discretion_above_all"
+            "discretion",
+            "secrets",
+            "silence",
+            "privacy"
           ],
           "name": "discretion_above_all"
         },
         {
-          "content": "A personal belief in prioritizing the lord's interests and protecting their secret relationship at all costs.",
+          "content": "type: belief\nsummary: duty to the lord sustains status\nprinciples: obedience, protection of reputation",
           "enabled": true,
           "extensions": {
             "entryType": "ideology",
@@ -108,12 +134,15 @@
           },
           "insertion_order": 7,
           "keys": [
-            "loyalty_to_the_lord"
+            "loyalty",
+            "lord",
+            "duty",
+            "reputation"
           ],
           "name": "loyalty_to_the_lord"
         },
         {
-          "content": "A secret romantic and intimate relationship between Lydia and the lord of the manor, hidden from the lady.",
+          "content": "type: relationship\npeople: Lydia and Lord Alistair Graye\nnature: secret meetings, cautious gifts\nrisk: scandal, dismissal if discovered",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -121,12 +150,16 @@
           },
           "insertion_order": 8,
           "keys": [
-            "affair_with_the_lord"
+            "affair",
+            "lord",
+            "secret",
+            "Alistair",
+            "scandal"
           ],
           "name": "affair_with_the_lord"
         },
         {
-          "content": "Despite the secret affair, Lydia maintains a facade of respect and duty towards the lady of the house.",
+          "content": "type: relationship\nname: Lady Celine Graye\nsex: female\nage: 44\nrole: lady of the manor\nrapport: formal respect, guarded distance",
           "enabled": true,
           "extensions": {
             "entryType": "relationships",
@@ -134,7 +167,11 @@
           },
           "insertion_order": 9,
           "keys": [
-            "professional_respect_for_the_lady"
+            "lady",
+            "Celine",
+            "Graye",
+            "respect",
+            "manor"
           ],
           "name": "professional_respect_for_the_lady"
         }
