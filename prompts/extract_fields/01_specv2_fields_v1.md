@@ -26,9 +26,15 @@ Constraints:
 - Keep content non-graphic and avoid explicit sexual detail.
 - Preserve the character's identity and voice from the draft.
 - first_mes and each alternate_greetings entry must describe a different situation and tone.
-- Each greeting should name the season, location, and named people where possible.
-- first_mes must be a paragraph or two (multi-sentence), not a single line. Use the space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
-- Each alternate_greetings entry must be a paragraph or two (multi-sentence), not a single line. Avoid repeating the same fact within a single entry (no internal redundancy). Use the extra space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
+- first_mes and each alternate_greetings entry should be 3-4 short paragraphs.
+- Include inline dialogue for communication within first_mes and alternate_greetings.
+- Include a specific action, habit, or required task tied to the character's occupation or life situation.
+- first_mes must read as a first encounter/introductory moment with the character.
+- Each greeting should include grounding specifics (season/time cues, location, named people, or other concrete identifiers) in whatever combination fits the scene.
+- Prefer descriptive seasonal cues (e.g., falling leaves, heat haze, fresh blossoms) over literal season names unless explicitly appropriate.
+- Choose location scope that fits the scene (local room details, regional setting, or broader hemispherical context).
+- first_mes must be multi-sentence paragraphs; use the space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
+- Each alternate_greetings entry must be multi-sentence paragraphs. Avoid repeating the same fact within a single entry (no internal redundancy). Use the extra space to describe multiple surrounding elements (environment, time of day, location, nearby people, the character’s reactions, and any immediate setting cues).
 - In first_mes and alternate_greetings, try to avoid repeating {{user}} multiple times in the same entry; mention {{user}} once, then rely on pronouns or implied context.
 - mes_example must contain exactly 4 examples in this format:
   <START>...<END>

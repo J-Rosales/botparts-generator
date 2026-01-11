@@ -562,28 +562,21 @@ def _validate_greetings_context(greetings: list[str]) -> list[str]:
     for index, greeting in enumerate(greetings, start=1):
         has_season = bool(season_pattern.search(greeting))
         has_time = bool(weekday_pattern.search(greeting) or time_pattern.search(greeting))
-        if not (has_season or has_time):
-            warnings.append(
-                f"Greeting {index} should mention a season, weekday, or time of day."
-            )
         has_location = bool(
             location_pattern.search(greeting)
             or setting_pattern.search(greeting)
             or situation_pattern.search(greeting)
         )
-        if not has_location:
-            warnings.append(
-                f"Greeting {index} should mention a location, setting, or situational anchor."
-            )
         has_person = bool(
             name_pattern.search(greeting)
             or reminds_pattern.search(greeting)
             or belongs_pattern.search(greeting)
             or possessive_pattern.search(greeting)
         )
-        if not has_person:
+        has_temporal = has_season or has_time
+        if not (has_temporal or has_location or has_person):
             warnings.append(
-                f"Greeting {index} should mention a named person or reference who owns the place."
+                f"Greeting {index} should include at least one grounding cue (time/season, location, or person)."
             )
     return warnings
 
