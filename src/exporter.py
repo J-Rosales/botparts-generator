@@ -119,6 +119,50 @@ def _coerce_string_list(value: Any) -> list[str]:
     return []
 
 
+def _conditional_rule_matches(
+    rule: Any,
+    variant_slug: str,
+    variant_display_name: str,
+) -> bool:
+    condition: str | None = None
+    if isinstance(rule, dict):
+        condition_value = rule.get("condition")
+        if isinstance(condition_value, str):
+            condition = condition_value
+    elif isinstance(rule, str):
+        condition = rule
+    if not condition:
+        return False
+    normalized = condition.lower()
+    return variant_slug.lower() in normalized or variant_display_name.lower() in normalized
+
+
+def _normalize_system_prompt(raw_prompt: str, variant_slug: str | None) -> str:
+    if not raw_prompt:
+        return raw_prompt
+    stripped = raw_prompt.strip()
+    if not stripped.startswith("{"):
+        return raw_prompt
+    try:
+        payload = json.loads(stripped)
+    except json.JSONDecodeError:
+        return raw_prompt
+    if not isinstance(payload, dict):
+        return raw_prompt
+    if variant_slug is None:
+        payload.pop("conditional_rules", None)
+    else:
+        conditional_rules = payload.get("conditional_rules")
+        if isinstance(conditional_rules, list):
+            display_name = authoring.variant_slug_to_display_name(variant_slug)
+            payload["conditional_rules"] = [
+                rule
+                for rule in conditional_rules
+                if _conditional_rule_matches(rule, variant_slug, display_name)
+            ]
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 def _parse_keys(value: str, warnings: list[str], context: str) -> list[str]:
     raw = value.strip()
     if not raw:
@@ -306,7 +350,8 @@ def _build_spec_v2_card(
     data["first_mes"] = _coerce_string(spec_fields.get("first_mes"))
     data["mes_example"] = _coerce_string(spec_fields.get("mes_example"))
     data["creator_notes"] = _coerce_string(spec_fields.get("creator_notes"))
-    data["system_prompt"] = _coerce_string(spec_fields.get("system_prompt"))
+    system_prompt = _coerce_string(spec_fields.get("system_prompt"))
+    data["system_prompt"] = _normalize_system_prompt(system_prompt, variant_slug)
     data["post_history_instructions"] = _coerce_string(spec_fields.get("post_history_instructions"))
     data["alternate_greetings"] = _coerce_string_list(spec_fields.get("alternate_greetings"))
     data["tags"] = _coerce_string_list(spec_fields.get("tags") or fallback_tags)
