@@ -105,6 +105,11 @@ def test_try_open_in_editor_returns_false_without_editor(
     assert authoring.try_open_in_editor(tmp_path / "preliminary_draft.md") is False
 
 
+def test_sanitize_second_person_pronouns_handles_contractions() -> None:
+    text = "You're ready, and you’re ready too."
+    assert authoring.sanitize_second_person_pronouns(text) == "{{user}} is ready, and {{user}} is ready too."
+
+
 @pytest.mark.parametrize("status,expect_error", [("draft", False), ("locked", True)])
 def test_audit_validations(tmp_path: Path, status: str, expect_error: bool) -> None:
     sources_root = tmp_path / "sources"

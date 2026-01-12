@@ -22,6 +22,10 @@ SECOND_PERSON_PRONOUN_PATTERN = re.compile(
     re.IGNORECASE,
 )
 SECOND_PERSON_SUBSTITUTIONS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\byou['’]re\b", re.IGNORECASE), "{{user}} is"),
+    (re.compile(r"\byou['’]ve\b", re.IGNORECASE), "{{user}} has"),
+    (re.compile(r"\byou['’]ll\b", re.IGNORECASE), "{{user}} will"),
+    (re.compile(r"\byou['’]d\b", re.IGNORECASE), "{{user}} would"),
     (re.compile(r"\byou are\b", re.IGNORECASE), "{{user}} is"),
     (re.compile(r"\byou were\b", re.IGNORECASE), "{{user}} was"),
     (re.compile(r"\byou have\b", re.IGNORECASE), "{{user}} has"),
