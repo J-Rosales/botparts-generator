@@ -781,14 +781,28 @@ def build_site_data(
         modules = _map_modules(source_manifest)
         transforms = _map_transforms(source_manifest)
 
+        display_name = source_manifest.get("name") or site_entry.get("name") or slug
+        description = source_manifest.get("description") or site_entry.get("description") or ""
+        redistribute_allowed = (
+            source_manifest.get("redistributeAllowed") or site_entry.get("redistributeAllowed") or "unknown"
+        )
+        site_block = {
+            "slug": slug,
+            "name": display_name,
+            "description": description,
+            "shortDescription": short_description,
+            "tags": tags,
+            "spoilerTags": spoiler_tags,
+            "uploadDate": upload_date,
+            "variantSlugs": list(variant_slugs),
+            "redistributeAllowed": redistribute_allowed,
+        }
         manifest_payload = {
             "slug": slug,
-            "name": source_manifest.get("name") or site_entry.get("name") or slug,
-            "description": source_manifest.get("description") or site_entry.get("description") or "",
+            "name": display_name,
+            "description": description,
             "tags": tags,
-            "redistributeAllowed": source_manifest.get("redistributeAllowed")
-            or site_entry.get("redistributeAllowed")
-            or "unknown",
+            "redistributeAllowed": redistribute_allowed,
             "provenance": source_manifest.get("provenance") or site_entry.get("provenance") or {
                 "original": {"url": "https://example.com/unknown"}
             },
@@ -796,6 +810,7 @@ def build_site_data(
             "modules": modules,
             "transforms": transforms,
             "x": manifest_x,
+            "site": site_block,
         }
 
         if source_dir:
@@ -809,13 +824,13 @@ def build_site_data(
             )
         catalogue_entry = {
             "slug": slug,
-            "name": manifest_payload["name"],
-            "description": manifest_payload["description"],
+            "name": display_name,
+            "description": description,
             "tags": tags,
             "shortDescription": short_description,
             "spoilerTags": spoiler_tags,
             "uploadDate": upload_date,
-            "redistributeAllowed": manifest_payload["redistributeAllowed"],
+            "redistributeAllowed": redistribute_allowed,
             "placeholder": source_manifest in placeholder_manifests,
         }
         if variant_slugs:
