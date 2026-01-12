@@ -19,6 +19,7 @@ SITE_ONLY_FIELDS = {
     "spoilerTags": [],
     "aiTokens": None,
     "uploadDate": "",
+    "updatedAt": "",
 }
 EMBEDDED_ENTRY_TYPES = ("locations", "items", "knowledge", "ideology", "relationships")
 EMBEDDED_ENTRY_LIMIT = 50
@@ -743,6 +744,15 @@ def build_site_data(
             upload_date = SITE_ONLY_FIELDS["uploadDate"]
         elif not isinstance(upload_date, str):
             upload_date = str(upload_date)
+        updated_at = (
+            _extract_site_field(site_entry, "updatedAt")
+            or _extract_site_field(source_manifest, "updatedAt")
+            or source_manifest.get("updatedAt")
+        )
+        if updated_at is None:
+            updated_at = upload_date or SITE_ONLY_FIELDS["updatedAt"]
+        elif not isinstance(updated_at, str):
+            updated_at = str(updated_at)
         ai_tokens = _coerce_ai_tokens(
             _extract_site_field(source_manifest, "aiTokens")
             or _extract_site_field(site_entry, "aiTokens"),
@@ -754,6 +764,7 @@ def build_site_data(
             "spoilerTags": spoiler_tags,
             "aiTokens": ai_tokens,
             "uploadDate": upload_date,
+            "updatedAt": updated_at,
         }
         if source_manifest in placeholder_manifests:
             site_fields["placeholder"] = True
@@ -794,6 +805,7 @@ def build_site_data(
             "tags": tags,
             "spoilerTags": spoiler_tags,
             "uploadDate": upload_date,
+            "updatedAt": updated_at,
             "variantSlugs": list(variant_slugs),
             "redistributeAllowed": redistribute_allowed,
         }
@@ -830,6 +842,7 @@ def build_site_data(
             "shortDescription": short_description,
             "spoilerTags": spoiler_tags,
             "uploadDate": upload_date,
+            "updatedAt": updated_at,
             "redistributeAllowed": redistribute_allowed,
             "placeholder": source_manifest in placeholder_manifests,
         }
@@ -902,9 +915,10 @@ def _render_report(summary: BuildSummary, include_timestamps: bool) -> str:
             f"  - spoilerTags (default: {SITE_ONLY_FIELDS['spoilerTags']})",
             f"  - aiTokens (default: {SITE_ONLY_FIELDS['aiTokens']})",
             f"  - uploadDate (default: '{SITE_ONLY_FIELDS['uploadDate']}')",
+            f"  - updatedAt (default: '{SITE_ONLY_FIELDS['updatedAt']}')",
             "  - placeholder (default: false for real characters)",
             "- Tag partitioning: tags starting with 'spoiler:' move to spoilerTags; prefix stripped, trimmed, deduped.",
-            "- uploadDate formatting: YYYY-MM-DD (date-only); empty string when unknown.",
+            "- uploadDate/updatedAt formatting: YYYY-MM-DD (date-only); empty string when unknown.",
             "- aiTokens type: number|null.",
             "",
             "## Warnings",
