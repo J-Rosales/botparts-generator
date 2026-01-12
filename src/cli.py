@@ -1467,10 +1467,12 @@ def _build_schema_extraction_input(
         notes.append(f"PROSE VARIANT: {prose_variant}")
     notes.append(
         "GREETINGS REQUIREMENTS:\n"
-        "- Each greeting should mention a season; if unavailable, use a weekday or time of day.\n"
-        "- Each greeting should mention a location or setting; a situational anchor also works.\n"
-        "- Each greeting should mention a named person; if unavailable, reference who owns the place "
-        "or who the moment reminds the character of.\n"
+        "- Each greeting should include grounding specifics in any mix that fits the scene (season/time cues, "
+        "location/setting, named people, or other concrete identifiers).\n"
+        "- Prefer descriptive seasonal cues (e.g., falling leaves, dry heat, fresh blossoms) over literal "
+        "season names unless explicitly appropriate.\n"
+        "- Choose location scope that matches the scene (local room details, regional setting, or broader "
+        "hemispherical context).\n"
         "- If details are missing, make up plausible ones consistent with the setting and time period."
     )
     if notes:
